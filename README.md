@@ -94,6 +94,8 @@ project-CITS3403-1/
 
 ## Setup and Launch
 
+### macOS / Linux
+
 ```bash
 # Clone the repository (from the feature-rania branch)
 git clone -b feature-rania https://github.com/Josh-Sporne/project-CITS3403.git
@@ -120,9 +122,57 @@ python seed.py
 flask run
 ```
 
+### Windows
+
+```cmd
+:: Clone the repository (from the feature-rania branch)
+git clone -b feature-rania https://github.com/Josh-Sporne/project-CITS3403.git
+cd project-CITS3403
+
+:: Create virtual environment
+python -m venv .venv
+.venv\Scripts\activate
+
+:: Install dependencies
+pip install -r requirements.txt
+
+:: Configure environment
+copy .env.example .env
+:: Edit .env with your own SECRET_KEY (and OPENAI_API_KEY if using AI features)
+
+:: Initialize database
+flask db upgrade
+
+:: Load demo data (optional)
+python seed.py
+
+:: Run the application
+flask run
+```
+
 Open [http://localhost:5000](http://localhost:5000) in your browser.
 
 **Demo login:** username `rania`, password `password123`
+
+## Working on Your Own Branch
+
+After cloning, switch to your own branch so changes don't affect `feature-rania`:
+
+### If creating a new branch
+
+```bash
+# Replace "feature-yourname" with your actual branch name
+git checkout -b feature-yourname
+git push -u origin feature-yourname
+```
+
+### If you already have a branch on remote
+
+```bash
+git checkout feature-yourname
+git merge origin/feature-rania
+git push
+```
 
 ## Running Tests
 
