@@ -19,8 +19,8 @@ Plate Theory solves the daily problem of "what should I eat?" by combining recip
 |--------|--------|-----------------|
 | ...    | Rania  | raniak25        |
 | ...    | Josh   | Josh-Sporne     |
-| ...    | Yifeng | ...             |
-| ...    | Olivia | ...             |
+| ...    | Yifeng | Yifeng-593      |
+| ...    | Olivia | OliviaSynn      |
 
 ## Architecture
 
