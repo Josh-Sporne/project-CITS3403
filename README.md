@@ -95,8 +95,8 @@ project-CITS3403-1/
 ## Setup and Launch
 
 ```bash
-# Clone the repository
-git clone https://github.com/Josh-Sporne/project-CITS3403.git
+# Clone the repository (from the feature-rania branch)
+git clone -b feature-rania https://github.com/Josh-Sporne/project-CITS3403.git
 cd project-CITS3403
 
 # Create virtual environment
