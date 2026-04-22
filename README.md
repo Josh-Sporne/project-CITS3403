@@ -1,6 +1,6 @@
 # Plate Theory
 
-A community-driven meal planning web app where users discover recipes, plan weekly meals, generate grocery lists, and get AI-powered meal suggestions based on pantry ingredients.
+A community-driven meal planning web app where users discover recipes, plan weekly meals, generate grocery lists, and get smart meal suggestions based on pantry ingredients.
 
 ## Purpose
 
@@ -10,7 +10,7 @@ Plate Theory solves the daily problem of "what should I eat?" by combining recip
 - **Discover recipes** through search, category filters, and trending feeds
 - **Plan weekly meals** on an interactive calendar with breakfast/lunch/dinner slots
 - **Auto-generate grocery lists** from meal plans, minus what's already in their pantry
-- **Get AI-powered suggestions** based on ingredients they have on hand
+- **Get ingredient-matched suggestions** based on what they have on hand
 - **Engage socially** — rate, comment, follow cooks, and compete on leaderboards
 
 ## Team
@@ -24,29 +24,73 @@ Plate Theory solves the daily problem of "what should I eat?" by combining recip
 
 ## Architecture
 
-- **Backend:** Flask with Blueprints (auth, recipes, planner, ai, community)
-- **Database:** SQLite via SQLAlchemy with Flask-Migrate for migrations
-- **Frontend:** Bootstrap 5 dark theme, vanilla JavaScript, jQuery
-- **Authentication:** Flask-Login with session management and password hashing
-- **AI:** Optional OpenAI integration for meal suggestions + database-driven pantry matching
+- **Backend:** Python 3 / Flask with Blueprints (auth, recipes, planner, ai, community)
+- **Database:** SQLite via SQLAlchemy ORM with Flask-Migrate for schema migrations
+- **Frontend:** Bootstrap 5 with custom CSS (dark/light theme toggle), vanilla JavaScript (ES6+)
+- **Authentication:** Flask-Login with session-based auth and Werkzeug password hashing
+- **Forms & Security:** Flask-WTF with CSRF protection on all forms and AJAX requests
+- **Pantry Matching:** Database-driven ingredient matching with optional OpenAI integration
 
 ### Database Schema
 
-10 tables: User, Recipe, RecipeIngredient, MealPlan, MealPlanItem, Rating, Comment, SavedRecipe, PantryItem, Follower
+10 models with relationships, indexes, and unique constraints:
 
-### Key Features
+| Model | Purpose |
+|-------|---------|
+| User | Accounts with hashed passwords, bios, Gravatar avatars |
+| Recipe | Titles, slugs, descriptions, instructions, categories, soft deletes |
+| RecipeIngredient | Ingredient names, quantities, and units per recipe |
+| MealPlan | Weekly plans tied to a user and a week-start date |
+| MealPlanItem | Individual meal slots (day + meal type) linking to recipes or custom text |
+| Rating | 1–5 star ratings with unique constraint per user/recipe pair |
+| Comment | Timestamped comments on recipes |
+| SavedRecipe | Bookmark/save toggle per user/recipe pair |
+| PantryItem | User's pantry ingredients for matching |
+| Follower | Follower/followed relationships between users |
+
+### Key Routes
 
 | Feature | Route | Description |
 |---------|-------|-------------|
 | Home | `/` | Trending recipes, new this week, quick actions |
 | Discover | `/discover` | Search, filter by category, sort, AJAX pagination |
-| Recipe Detail | `/recipe/<slug>` | Ingredients, instructions, ratings, comments |
-| Create Recipe | `/recipe/create` | Form with dynamic ingredients, image upload |
-| Meal Planner | `/planner` | Weekly calendar, click-to-assign, day/week toggle |
-| Grocery List | `/grocery` | Auto-generated checklist, pantry exclusion, export |
-| Pantry AI | `/pantry` | Ingredient input, DB matching, optional AI suggestions |
-| Community | `/community` | Feed from followed users, leaderboard |
-| Profile | `/profile` | Dashboard with recipes, saves, stats, settings |
+| Recipe Detail | `/recipe/<slug>` | Ingredients, instructions, star ratings, comments |
+| Create/Edit Recipe | `/recipe/create` | Form with dynamic ingredient rows, image upload |
+| Meal Planner | `/planner` | Weekly grid, click-to-assign modal, day/week toggle |
+| Grocery List | `/grocery` | Auto-generated from meal plan, pantry exclusion |
+| Pantry Suggestions | `/pantry` | Ingredient input, DB matching with percentage scores |
+| Community | `/community` | Feed from followed users, monthly leaderboard |
+| Profile | `/profile` | Dashboard with recipes, saved items, stats, bio editor |
+| Public Profile | `/user/<username>` | View another user's recipes and follow/unfollow |
+
+### Project Structure
+
+```
+project-CITS3403-1/
+├── app/
+│   ├── __init__.py              # App factory, extensions, blueprint registration
+│   ├── models.py                # All 10 SQLAlchemy models
+│   ├── auth/                    # Registration, login, logout, profile routes & forms
+│   ├── recipes/                 # Recipe CRUD, ratings, comments, save/unsave, discover
+│   ├── planner/                 # Meal planner grid, AJAX save/remove, grocery list API
+│   ├── ai/                      # Pantry ingredient matching, OpenAI suggestions
+│   ├── community/               # Feed, leaderboard, follow/unfollow
+│   ├── static/
+│   │   ├── css/style.css        # Full dark/light theme with CSS variables
+│   │   ├── js/                  # main.js, discover.js, planner.js, pantry.js, validation.js
+│   │   └── uploads/             # User-uploaded recipe images
+│   └── templates/               # Jinja2 templates organised by blueprint
+├── migrations/                  # Alembic migration scripts
+├── tests/
+│   ├── unit/                    # 10 unit tests (auth, recipes, ratings, planner)
+│   └── selenium/                # 6 browser tests (registration, login, page flows)
+├── config.py                    # Config and TestConfig classes
+├── run.py                       # Application entry point
+├── seed.py                      # Demo data seeder
+├── requirements.txt             # Python dependencies
+├── .env.example                 # Environment variable template
+└── .gitignore
+```
 
 ## Setup and Launch
 
@@ -78,7 +122,7 @@ flask run
 
 Open [http://localhost:5000](http://localhost:5000) in your browser.
 
-**Demo login credentials:** username `rania`, password `password123`
+**Demo login:** username `rania`, password `password123`
 
 ## Running Tests
 
@@ -89,12 +133,12 @@ python -m pytest tests/unit/ -v
 ```
 
 10 unit tests covering:
-- User registration and authentication
-- Protected route access control
-- Recipe CRUD with slug generation
-- Ownership verification (403 on unauthorized edit)
-- Rating average computation and upsert behavior
-- Grocery list ingredient aggregation
+- User registration, login, and password hashing
+- Protected route access control (redirect when not logged in)
+- Recipe CRUD with automatic slug generation
+- Ownership verification (403 on unauthorized edit/delete)
+- Rating average computation and upsert behaviour
+- Grocery list ingredient aggregation from meal plans
 - Pantry item exclusion from grocery lists
 
 ### Selenium Tests
@@ -105,7 +149,7 @@ Requires Chrome and ChromeDriver installed.
 # Start the application in one terminal
 flask run
 
-# Run selenium tests in another terminal
+# Run Selenium tests in another terminal
 python -m pytest tests/selenium/ -v
 ```
 
@@ -117,18 +161,28 @@ python -m pytest tests/selenium/ -v
 - Recipe creation
 - Community page access
 
+## Security
+
+- **Password storage:** Salted hashes via Werkzeug (`generate_password_hash` / `check_password_hash`), never stored in plaintext
+- **CSRF protection:** Flask-WTF `CSRFProtect` enabled globally; tokens embedded in all forms via `{{ form.hidden_tag() }}` and sent as `X-CSRFToken` headers on AJAX requests
+- **Environment variables:** Secret key, database URL, and API keys stored in `.env` (gitignored), with `.env.example` as a template
+- **Authorization:** `@login_required` on all protected routes; owner-only checks on recipe edit/delete (returns 403)
+- **Rate limiting:** AI suggestion endpoint limited to one request per 30 seconds per user
+
 ## Technologies
 
 | Technology | Purpose |
 |------------|---------|
+| Python 3 | Backend language |
 | Flask | Web framework |
-| SQLAlchemy | ORM / database |
+| SQLAlchemy | ORM and database abstraction |
 | SQLite | Database engine |
-| Flask-Login | Session management |
-| Flask-WTF | Form handling + CSRF |
-| Flask-Migrate | Database migrations |
-| Bootstrap 5 | CSS framework |
+| Flask-Login | Session-based authentication |
+| Flask-WTF | Form handling and CSRF protection |
+| Flask-Migrate | Database schema migrations (Alembic) |
+| Bootstrap 5 | Responsive CSS framework |
 | Bootstrap Icons | Icon library |
-| JavaScript (ES6+) | Client-side interactivity |
-| OpenAI API | AI meal suggestions (optional) |
-| Selenium | Browser testing |
+| JavaScript (ES6+) | Client-side interactivity and AJAX |
+| OpenAI API | Meal suggestions (optional) |
+| Selenium | Browser automation testing |
+| pytest | Test runner |
