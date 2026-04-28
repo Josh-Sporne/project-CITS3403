@@ -2,6 +2,16 @@ import json
 
 from app import db
 from app.models import Recipe, RecipeIngredient, PantryItem
+from app.ai.recipe_defaults import (
+    DEFAULT_AI_CATEGORY,
+    DEFAULT_AI_COOKING_TIME,
+    MAX_INSTRUCTIONS_LEN,
+    MAX_INGREDIENT_ROWS,
+    MAX_INGREDIENT_NAME_LEN,
+)
+from app.recipes.forms import CATEGORY_CHOICES
+
+_VALID_CATEGORIES = {c[0] for c in CATEGORY_CHOICES}
 
 
 def get_pantry_matches(user_id):
@@ -42,6 +52,76 @@ def get_pantry_matches(user_id):
 
     results.sort(key=lambda x: x['match_pct'], reverse=True)
     return results[:10]
+
+
+def normalize_save_ingredients(raw_list):
+    """Coerce OpenAI / client ingredient shapes into dicts for RecipeIngredient."""
+    if not raw_list:
+        return []
+    out = []
+    for item in raw_list[:MAX_INGREDIENT_ROWS]:
+        if isinstance(item, str):
+            name = item.strip()
+            if name:
+                out.append({
+                    'name': name[:MAX_INGREDIENT_NAME_LEN],
+                    'quantity': '',
+                    'unit': '',
+                })
+        elif isinstance(item, dict):
+            name = (
+                item.get('name')
+                or item.get('title')
+                or item.get('ingredient')
+                or ''
+            )
+            name = str(name).strip()
+            if not name:
+                continue
+            qty = str(item.get('quantity') or '').strip()[:50]
+            unit = str(item.get('unit') or '').strip()[:30]
+            out.append({
+                'name': name[:MAX_INGREDIENT_NAME_LEN],
+                'quantity': qty,
+                'unit': unit,
+            })
+    return out
+
+
+def map_diet_to_category(diet_hint):
+    """Map Pantry diet select value to a valid Recipe.category slug."""
+    if not diet_hint:
+        return DEFAULT_AI_CATEGORY
+    d = str(diet_hint).lower().strip()
+    if d in _VALID_CATEGORIES:
+        return d
+    return DEFAULT_AI_CATEGORY
+
+
+def validate_ai_save_payload(title, instructions, ingredients_raw):
+    """
+    Returns (error_message, None) or (None, payload dict).
+    payload: title, instructions, ingredients (list of dicts with name, quantity, unit).
+    """
+    title = (title or '').strip()
+    if not title or len(title) > 200:
+        return 'Title must be 1–200 characters.', None
+
+    instructions = (instructions or '').strip()
+    if not instructions:
+        return 'Instructions are required.', None
+    if len(instructions) > MAX_INSTRUCTIONS_LEN:
+        return 'Instructions are too long.', None
+
+    ingredients = normalize_save_ingredients(ingredients_raw)
+    if not ingredients:
+        return 'At least one ingredient is required.', None
+
+    return None, {
+        'title': title,
+        'instructions': instructions,
+        'ingredients': ingredients,
+    }
 
 
 def get_ai_suggestions(ingredients, preferences, api_key):

@@ -825,6 +825,19 @@ footer p {
 /* 4. Component Styles
    ------------------------------------------------------------ */
 
+/* --- AI-generated recipe badge --- */
+.badge-ai {
+  background-color: var(--pt-violet);
+  color: var(--pt-bg);
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+[data-theme="light"] .badge-ai {
+  color: #fff;
+}
+
 /* --- Recipe Card (pt-card) --- */
 .pt-card {
   background: var(--pt-surface2);

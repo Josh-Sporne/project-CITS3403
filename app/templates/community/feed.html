@@ -73,6 +73,9 @@
                                 {% if recipe.category %}
                                 <span class="badge bg-info">{{ recipe.category }}</span>
                                 {% endif %}
+                                {% if recipe.is_ai_generated %}
+                                <span class="badge badge-ai">AI</span>
+                                {% endif %}
                                 <span class="text-muted-custom">
                                     <i class="bi bi-bookmark"></i> {{ recipe.save_count }}
                                 </span>

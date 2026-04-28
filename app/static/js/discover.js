@@ -145,10 +145,14 @@
         const rating = (r.avg_rating || 0).toFixed(1);
         const creator = r.creator ? escapeHtml(r.creator.username) : '';
 
+        const aiBadge = r.is_ai_generated
+            ? '<span class="badge badge-ai ms-1">AI</span>'
+            : '';
+
         return `
         <article class="pt-card h-100">
             <div class="img-ph">${imgBlock}</div>
-            <h3><a href="/recipe/${slug}" class="text-decoration-none" style="color:var(--pt-text);">${title}</a></h3>
+            <h3><a href="/recipe/${slug}" class="text-decoration-none" style="color:var(--pt-text);">${title}</a>${aiBadge}</h3>
             <p>
                 <i class="bi bi-clock"></i> ${time} min
                 ${category ? `<span class="badge bg-info ms-2">${category}</span>` : ''}
