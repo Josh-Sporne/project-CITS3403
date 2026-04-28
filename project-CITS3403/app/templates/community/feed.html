@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}Community — Plate Theory{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-people text-mint"></i> Community</h2>
+
+<div class="row g-4">
+    <!-- Main Feed -->
+    <div class="col-lg-8">
+        {% if recipes %}
+        {% for recipe in recipes %}
+        <div class="card mb-3 animate-fade">
+            <div class="card-body">
+                <div class="d-flex align-items-start gap-3">
+                    {% if recipe.creator %}
+                    <img src="{{ recipe.creator.avatar_url }}" alt="{{ recipe.creator.username }}"
+                         class="rounded-circle" width="40" height="40"
+                         style="border:2px solid var(--pt-border)">
+                    {% else %}
+                    <div class="avatar-circle" data-size="sm">?</div>
+                    {% endif %}
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <div>
+                                {% if recipe.creator %}
+                                <a href="/user/{{ recipe.creator.username }}"
+                                   class="fw-bold" style="font-size:.88rem">
+                                    {{ recipe.creator.username }}
+                                </a>
+                                {% if current_user.is_authenticated and current_user.id != recipe.creator_id %}
+                                <button class="btn btn-sm btn-outline-mint ms-2 follow-btn"
+                                        data-username="{{ recipe.creator.username }}"
+                                        style="font-size:.65rem;padding:.15rem .45rem">
+                                    {% if current_user.is_following(recipe.creator) %}
+                                    Unfollow
+                                    {% else %}
+                                    Follow
+                                    {% endif %}
+                                </button>
+                                {% endif %}
+                                {% endif %}
+                            </div>
+                            <small class="text-muted-custom" style="font-size:.72rem">
+                                {{ recipe.created_at.strftime('%b %d, %Y') if recipe.created_at else '' }}
+                            </small>
+                        </div>
+                        <p class="mb-1 text-muted-custom" style="font-size:.78rem">
+                            shared a recipe
+                        </p>
+
+                        <!-- Recipe Preview Card -->
+                        <div class="pt-card mt-2">
+                            {% if recipe.image_filename %}
+                            <img src="{{ url_for('static', filename='uploads/' + recipe.image_filename) }}"
+                                 alt="{{ recipe.title }}">
+                            {% else %}
+                            <div class="img-ph"></div>
+                            {% endif %}
+                            <h3>
+                                {% if recipe.slug %}
+                                <a href="/recipe/{{ recipe.slug }}">{{ recipe.title }}</a>
+                                {% else %}
+                                {{ recipe.title }}
+                                {% endif %}
+                            </h3>
+                            <p>{{ recipe.description[:120] }}{% if recipe.description|length > 120 %}…{% endif %}</p>
+                            <div class="d-flex align-items-center gap-3 mt-2" style="font-size:.72rem">
+                                {% if recipe.cooking_time %}
+                                <span class="text-muted-custom">
+                                    <i class="bi bi-clock"></i> {{ recipe.cooking_time }} min
+                                </span>
+                                {% endif %}
+                                {% if recipe.category %}
+                                <span class="badge bg-info">{{ recipe.category }}</span>
+                                {% endif %}
+                                <span class="text-muted-custom">
+                                    <i class="bi bi-bookmark"></i> {{ recipe.save_count }}
+                                </span>
+                                {% if recipe.avg_rating > 0 %}
+                                <span class="text-sun">
+                                    <i class="bi bi-star-fill"></i> {{ recipe.avg_rating }}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-people" style="font-size:2rem;color:var(--pt-muted)"></i>
+                <p class="text-muted-custom mt-2" style="font-size:.88rem">
+                    No recipes shared yet. Be the first to
+                    <a href="/recipe/create">create one</a>!
+                </p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar: Leaderboard -->
+    <div class="col-lg-4">
+        <div class="card sticky-top" style="top:1rem">
+            <div class="card-header">
+                <i class="bi bi-trophy text-sun"></i> Top Creators This Month
+            </div>
+            <div class="card-body p-0">
+                {% if leaderboard %}
+                <ol class="list-group list-group-flush" style="counter-reset:lb">
+                    {% for entry in leaderboard %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center"
+                        style="font-size:.85rem;background:transparent">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="text-sun fw-bold" style="font-size:.78rem;min-width:1.2rem">
+                                {{ loop.index }}
+                            </span>
+                            <a href="/user/{{ entry.username }}">{{ entry.username }}</a>
+                        </div>
+                        <span class="badge bg-primary">{{ entry.recipe_count }} recipes</span>
+                    </li>
+                    {% endfor %}
+                </ol>
+                {% else %}
+                <div class="p-3">
+                    <p class="text-muted-custom mb-0" style="font-size:.82rem">
+                        No recipes created this month yet.
+                    </p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+    document.querySelectorAll('.follow-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const username = this.dataset.username;
+            fetch('/user/' + username + '/follow', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF,
+                },
+            })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        document.querySelectorAll(`.follow-btn[data-username="${username}"]`).forEach(b => {
+                            b.textContent = data.following ? 'Unfollow' : 'Follow';
+                        });
+                    }
+                });
+        });
+    });
+})();
+</script>
+{% endblock %}

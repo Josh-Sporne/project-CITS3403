@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit Recipe' if edit else 'Create Recipe' }} — Plate Theory{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="pt-panel">
+            <h2 class="mb-4">
+                <i class="bi bi-{{ 'pencil-square' if edit else 'plus-circle' }} me-2"></i>
+                {{ 'Edit Recipe' if edit else 'Create Recipe' }}
+            </h2>
+
+            <form method="POST" enctype="multipart/form-data" id="recipe-form">
+                {{ form.hidden_tag() }}
+
+                <!-- Title -->
+                <div class="mb-3">
+                    <label for="title" class="form-label">Title</label>
+                    {{ form.title(class="form-control", placeholder="e.g. Midnight Kimchi Fried Rice", id="title") }}
+                    {% for error in form.title.errors %}
+                    <div class="form-text text-coral">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <!-- Description -->
+                <div class="mb-3">
+                    <label for="description" class="form-label">Description</label>
+                    {{ form.description(class="form-control", rows="2", placeholder="A short description of your recipe…", id="description") }}
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <!-- Cooking Time -->
+                    <div class="col-md-6">
+                        <label for="cooking_time" class="form-label">Cooking Time (minutes)</label>
+                        {{ form.cooking_time(class="form-control", placeholder="30", id="cooking_time") }}
+                        {% for error in form.cooking_time.errors %}
+                        <div class="form-text text-coral">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Category -->
+                    <div class="col-md-6">
+                        <label for="category" class="form-label">Category</label>
+                        {{ form.category(class="form-select", id="category") }}
+                    </div>
+                </div>
+
+                <!-- Instructions -->
+                <div class="mb-3">
+                    <label for="instructions" class="form-label">Instructions</label>
+                    {{ form.instructions(class="form-control", rows="6", placeholder="Step-by-step instructions…", id="instructions") }}
+                    {% for error in form.instructions.errors %}
+                    <div class="form-text text-coral">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <!-- Ingredients -->
+                <div class="mb-3">
+                    <label class="form-label">Ingredients</label>
+                    <div id="ingredients-container">
+                        {% if edit and ingredients %}
+                            {% for ing in ingredients %}
+                            <div class="ingredient-row d-flex gap-2 mb-2 align-items-center">
+                                <input type="text" name="ingredient_name[]" class="form-control" placeholder="Ingredient" value="{{ ing.name }}">
+                                <input type="text" name="ingredient_qty[]" class="form-control" style="max-width:100px;" placeholder="Qty" value="{{ ing.quantity }}">
+                                <input type="text" name="ingredient_unit[]" class="form-control" style="max-width:100px;" placeholder="Unit" value="{{ ing.unit }}">
+                                <button type="button" class="btn btn-sm btn-outline-coral remove-ingredient" title="Remove"><i class="bi bi-x-lg"></i></button>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="ingredient-row d-flex gap-2 mb-2 align-items-center">
+                                <input type="text" name="ingredient_name[]" class="form-control" placeholder="Ingredient">
+                                <input type="text" name="ingredient_qty[]" class="form-control" style="max-width:100px;" placeholder="Qty">
+                                <input type="text" name="ingredient_unit[]" class="form-control" style="max-width:100px;" placeholder="Unit">
+                                <button type="button" class="btn btn-sm btn-outline-coral remove-ingredient" title="Remove"><i class="bi bi-x-lg"></i></button>
+                            </div>
+                        {% endif %}
+                    </div>
+                    <button type="button" id="add-ingredient" class="btn btn-sm btn-outline-mint mt-1">
+                        <i class="bi bi-plus me-1"></i> Add Ingredient
+                    </button>
+                </div>
+
+                <!-- Image -->
+                <div class="mb-4">
+                    <label for="image" class="form-label">Recipe Image</label>
+                    {{ form.image(class="form-control", id="image") }}
+                    {% for error in form.image.errors %}
+                    <div class="form-text text-coral">{{ error }}</div>
+                    {% endfor %}
+                    {% if edit and recipe.image_filename %}
+                    <div class="mt-2">
+                        <small class="text-muted-custom">Current image:</small>
+                        <img src="{{ url_for('static', filename='uploads/' + recipe.image_filename) }}" alt="Current" style="max-height:80px;border-radius:8px;" class="mt-1">
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Submit -->
+                <button type="submit" class="btn btn-mint w-100">
+                    <i class="bi bi-check-lg me-1"></i>
+                    {{ 'Update Recipe' if edit else 'Publish Recipe' }}
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const container = document.getElementById('ingredients-container');
+    const addBtn = document.getElementById('add-ingredient');
+
+    const rowHtml = `
+        <div class="ingredient-row d-flex gap-2 mb-2 align-items-center">
+            <input type="text" name="ingredient_name[]" class="form-control" placeholder="Ingredient">
+            <input type="text" name="ingredient_qty[]" class="form-control" style="max-width:100px;" placeholder="Qty">
+            <input type="text" name="ingredient_unit[]" class="form-control" style="max-width:100px;" placeholder="Unit">
+            <button type="button" class="btn btn-sm btn-outline-coral remove-ingredient" title="Remove"><i class="bi bi-x-lg"></i></button>
+        </div>`;
+
+    addBtn.addEventListener('click', () => {
+        container.insertAdjacentHTML('beforeend', rowHtml);
+    });
+
+    container.addEventListener('click', (e) => {
+        const removeBtn = e.target.closest('.remove-ingredient');
+        if (removeBtn) {
+            const row = removeBtn.closest('.ingredient-row');
+            if (container.querySelectorAll('.ingredient-row').length > 1) {
+                row.remove();
+            } else {
+                row.querySelectorAll('input').forEach(inp => inp.value = '');
+            }
+        }
+    });
+})();
+</script>
+{% endblock %}

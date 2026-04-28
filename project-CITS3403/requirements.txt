@@ -1,0 +1,10 @@
+flask
+flask-sqlalchemy
+flask-login
+flask-wtf
+flask-migrate
+email-validator
+python-dotenv
+python-slugify
+openai
+selenium
