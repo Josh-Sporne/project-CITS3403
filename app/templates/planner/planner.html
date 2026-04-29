@@ -49,6 +49,35 @@
     {% endfor %}
 </div>
 
+<!-- Add to Plan Modal (callable from any page via window.openAddToPlanModal) -->
+<div class="modal fade" id="addToPlanModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content pt-panel">
+      <div class="modal-header">
+        <h6 class="modal-title">Add to Meal Plan</h6>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p id="addToPlanRecipeName" class="fw-bold mb-3"></p>
+        <input type="hidden" id="addToPlanRecipeId">
+        <select id="addToPlanDay" class="form-select mb-2">
+          <option value="0">Monday</option><option value="1">Tuesday</option>
+          <option value="2">Wednesday</option><option value="3">Thursday</option>
+          <option value="4">Friday</option><option value="5">Saturday</option>
+          <option value="6">Sunday</option>
+        </select>
+        <select id="addToPlanMeal" class="form-select mb-3">
+          <option value="breakfast">Breakfast</option>
+          <option value="lunch">Lunch</option>
+          <option value="dinner">Dinner</option>
+          <option value="snack">Snack</option>
+        </select>
+        <button class="btn btn-mint w-100" id="addToPlanSaveBtn">Add</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Assign Modal -->
 <div class="modal fade" id="assignModal" tabindex="-1" aria-labelledby="assignModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">

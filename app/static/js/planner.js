@@ -146,4 +146,31 @@
 
     applyRangeToGrid(currentRange);
     fetchGroceryPreview();
+
+    /* --- Cross-page Add to Meal Plan modal --- */
+    window.openAddToPlanModal = function (recipeId, recipeName) {
+        document.getElementById('addToPlanRecipeId').value = recipeId;
+        document.getElementById('addToPlanRecipeName').textContent = recipeName;
+        new bootstrap.Modal(document.getElementById('addToPlanModal')).show();
+    };
+
+    document.getElementById('addToPlanSaveBtn')?.addEventListener('click', function () {
+        const recipeId = document.getElementById('addToPlanRecipeId').value;
+        const day = document.getElementById('addToPlanDay').value;
+        const mealType = document.getElementById('addToPlanMeal').value;
+
+        fetch('/api/planner/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+            body: JSON.stringify({ recipe_id: recipeId, day: day, meal_type: mealType }),
+        })
+            .then(r => r.json())
+            .then(() => {
+                bootstrap.Modal.getInstance(document.getElementById('addToPlanModal')).hide();
+                if (window.showToast) window.showToast('Added to meal plan');
+            })
+            .catch(() => {
+                if (window.showErrorToast) window.showErrorToast('Could not add to meal plan.');
+            });
+    });
 })();
