@@ -11,9 +11,8 @@
     let currentRange = 'week';
 
     function safeReload() {
-        modal.hide();
         modalEl.addEventListener('hidden.bs.modal', () => location.reload(), { once: true });
-        setTimeout(() => location.reload(), 400);
+        modal.hide();
     }
 
     /* --- Add-meal buttons --- */
@@ -26,6 +25,8 @@
             document.getElementById('modalMealLabel').textContent = selectedMeal;
             document.getElementById('recipeSelect').value = '';
             document.getElementById('customText').value = '';
+            document.getElementById('recipeSearch').value = '';
+            document.querySelectorAll('#recipeSelect option').forEach(o => o.hidden = false);
             modal.show();
             return;
         }
@@ -45,6 +46,9 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) safeReload();
+                })
+                .catch(() => {
+                    showErrorToast('Could not remove meal. Please try again.');
                 });
         }
     });
@@ -92,15 +96,33 @@
             });
     });
 
+    /* --- Recipe search filter --- */
+    document.getElementById('recipeSearch').addEventListener('input', function () {
+        const q = this.value.toLowerCase();
+        document.querySelectorAll('#recipeSelect option').forEach(function (opt) {
+            if (!opt.value) return;
+            opt.hidden = !opt.textContent.toLowerCase().includes(q);
+        });
+    });
+
     /* --- Range toggles --- */
     document.querySelectorAll('.range-btn').forEach(btn => {
         btn.addEventListener('click', function () {
             document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             currentRange = this.dataset.range;
+            applyRangeToGrid(currentRange);
             fetchGroceryPreview();
         });
     });
+
+    function applyRangeToGrid(range) {
+        const todayIdx = (new Date().getDay() + 6) % 7;
+        document.querySelectorAll('.day-slot').forEach(col => {
+            const dayIdx = parseInt(col.dataset.day, 10);
+            col.style.display = (range === 'day' && dayIdx !== todayIdx) ? 'none' : '';
+        });
+    }
 
     /* --- Grocery preview --- */
     function fetchGroceryPreview() {
@@ -133,5 +155,33 @@
             });
     }
 
+    applyRangeToGrid(currentRange);
     fetchGroceryPreview();
+
+    /* --- Cross-page Add to Meal Plan modal --- */
+    window.openAddToPlanModal = function (recipeId, recipeName) {
+        document.getElementById('addToPlanRecipeId').value = recipeId;
+        document.getElementById('addToPlanRecipeName').textContent = recipeName;
+        new bootstrap.Modal(document.getElementById('addToPlanModal')).show();
+    };
+
+    document.getElementById('addToPlanSaveBtn')?.addEventListener('click', function () {
+        const recipeId = document.getElementById('addToPlanRecipeId').value;
+        const day = document.getElementById('addToPlanDay').value;
+        const mealType = document.getElementById('addToPlanMeal').value;
+
+        fetch('/api/planner/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+            body: JSON.stringify({ recipe_id: recipeId, day: day, meal_type: mealType }),
+        })
+            .then(r => r.json())
+            .then(() => {
+                bootstrap.Modal.getInstance(document.getElementById('addToPlanModal')).hide();
+                if (window.showToast) window.showToast('Added to meal plan');
+            })
+            .catch(() => {
+                if (window.showErrorToast) window.showErrorToast('Could not add to meal plan.');
+            });
+    });
 })();

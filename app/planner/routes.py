@@ -20,7 +20,7 @@ def _monday_of_week(d=None):
     return d - timedelta(days=d.weekday())
 
 
-def _get_or_create_plan(user_id, week_start=None):
+def _get_or_create_plan(user_id, week_start=None, commit=True):
     week_start = week_start or _monday_of_week()
     plan = MealPlan.query.filter_by(
         user_id=user_id, week_start=week_start
@@ -28,14 +28,15 @@ def _get_or_create_plan(user_id, week_start=None):
     if plan is None:
         plan = MealPlan(user_id=user_id, week_start=week_start)
         db.session.add(plan)
-        db.session.commit()
+        if commit:
+            db.session.commit()
     return plan
 
 
 @bp.route('/planner')
 @login_required
 def planner():
-    plan = _get_or_create_plan(current_user.id)
+    plan = _get_or_create_plan(current_user.id, commit=False)
     items = MealPlanItem.query.filter_by(mealplan_id=plan.id).all()
 
     grid = {}
@@ -119,7 +120,7 @@ def planner_remove():
     if not item_id:
         return jsonify(success=False, error='Missing item_id'), 400
 
-    item = MealPlanItem.query.get(int(item_id))
+    item = db.session.get(MealPlanItem, int(item_id))
     if item is None:
         return jsonify(success=False, error='Not found'), 404
 
@@ -135,6 +136,16 @@ def planner_remove():
 @login_required
 def grocery():
     return render_template('planner/grocery.html')
+
+
+def _smart_quantity(quantities):
+    if not quantities:
+        return ''
+    try:
+        total = sum(float(q) for q in quantities if str(q).strip())
+        return f'{total:g}'
+    except (ValueError, TypeError):
+        return ' + '.join(str(q) for q in quantities if str(q).strip())
 
 
 @bp.route('/api/grocery-list')
@@ -164,6 +175,9 @@ def grocery_list():
     for item in items:
         if not item.recipe_id:
             continue
+        recipe = Recipe.query.filter_by(id=item.recipe_id, is_deleted=False).first()
+        if not recipe:
+            continue
         for ri in RecipeIngredient.query.filter_by(recipe_id=item.recipe_id).all():
             key = ri.name.lower().strip()
             if key not in ingredient_map:
@@ -183,7 +197,7 @@ def grocery_list():
             excluded_count += 1
         grocery_items.append({
             'name': info['name'],
-            'quantity': ', '.join(info['quantities']) if info['quantities'] else '',
+            'quantity': _smart_quantity(info['quantities']),
             'unit': info['unit'],
             'in_pantry': in_pantry,
         })
