@@ -8,6 +8,12 @@
     <p>
         <i class="bi bi-clock"></i> {{ recipe.cooking_time or 30 }} min
         <span class="badge bg-info ms-2">{{ recipe.category|capitalize }}</span>
+<<<<<<< HEAD
+=======
+        {% if recipe.is_ai_generated %}
+        <span class="badge badge-ai ms-1">AI</span>
+        {% endif %}
+>>>>>>> origin/main
     </p>
     <div class="star-rating mb-1">
         {% set avg = recipe.avg_rating|round(0, 'floor')|int %}

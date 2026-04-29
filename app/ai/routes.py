@@ -4,9 +4,18 @@ from flask import render_template, request, jsonify, current_app
 from flask_login import login_required, current_user
 
 from app import db
-from app.models import PantryItem
+from app.models import PantryItem, Recipe, RecipeIngredient
 from app.ai import bp
-from app.ai.services import get_pantry_matches, get_ai_suggestions
+from app.ai.recipe_defaults import (
+    DEFAULT_AI_COOKING_TIME,
+    MAX_AI_SAVES_PER_HOUR,
+)
+from app.ai.services import (
+    get_pantry_matches,
+    get_ai_suggestions,
+    map_diet_to_category,
+    validate_ai_save_payload,
+)
 
 
 @bp.route('/pantry')
@@ -61,3 +70,73 @@ def ai_suggest():
         matches=matches,
         ai_suggestions=ai_suggestions,
     )
+
+
+@bp.route('/api/ai/save-recipe', methods=['POST'])
+@login_required
+def save_ai_recipe():
+    data = request.get_json(silent=True) or {}
+    err, payload = validate_ai_save_payload(
+        data.get('title'),
+        data.get('instructions'),
+        data.get('ingredients'),
+    )
+    if err:
+        return jsonify(success=False, error=err), 400
+
+    vis = (data.get('visibility') or '').lower()
+    if vis not in ('private', 'public'):
+        return jsonify(
+            success=False, error='visibility must be "private" or "public"',
+        ), 400
+
+    since = datetime.now(timezone.utc) - timedelta(hours=1)
+    recent_saves = Recipe.query.filter(
+        Recipe.creator_id == current_user.id,
+        Recipe.is_ai_generated.is_(True),
+        Recipe.created_at >= since,
+    ).count()
+    if recent_saves >= MAX_AI_SAVES_PER_HOUR:
+        return jsonify(
+            success=False,
+            error=f'You can save at most {MAX_AI_SAVES_PER_HOUR} AI recipes per hour.',
+        ), 429
+
+    max_t = data.get('max_cooking_time')
+    try:
+        ct = int(max_t) if max_t is not None and str(max_t).strip() != '' else DEFAULT_AI_COOKING_TIME
+    except (TypeError, ValueError):
+        ct = DEFAULT_AI_COOKING_TIME
+    ct = max(1, min(ct, 480))
+
+    category = map_diet_to_category(data.get('diet_hint'))
+    instr = payload['instructions']
+    description = ''
+    if instr:
+        first_line = instr.split('\n', 1)[0].strip()
+        description = first_line[:200] if first_line else ''
+
+    recipe = Recipe(
+        title=payload['title'],
+        description=description,
+        instructions=instr,
+        cooking_time=ct,
+        category=category,
+        creator_id=current_user.id,
+        is_public=(vis == 'public'),
+        is_ai_generated=True,
+    )
+    db.session.add(recipe)
+    db.session.flush()
+    recipe.generate_slug()
+
+    for row in payload['ingredients']:
+        db.session.add(RecipeIngredient(
+            recipe_id=recipe.id,
+            name=row['name'],
+            quantity=row['quantity'],
+            unit=row['unit'],
+        ))
+
+    db.session.commit()
+    return jsonify(success=True, slug=recipe.slug, id=recipe.id)

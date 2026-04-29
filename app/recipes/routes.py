@@ -124,6 +124,7 @@ def api_recipes():
                 'avatar_url': r.creator.avatar_url,
             },
             'created_at': r.created_at.isoformat() if r.created_at else None,
+            'is_ai_generated': bool(r.is_ai_generated),
         })
 
     return jsonify(recipes=data, total=total, has_next=has_next)
@@ -182,6 +183,11 @@ def create():
 @bp.route('/recipe/<slug>')
 def detail(slug):
     recipe = Recipe.query.filter_by(slug=slug, is_deleted=False).first_or_404()
+
+    if not recipe.is_public:
+        if not current_user.is_authenticated or recipe.creator_id != current_user.id:
+            from flask import abort
+            abort(404)
 
     avg_rating = recipe.avg_rating
     rating_count = recipe.rating_count
@@ -362,6 +368,29 @@ def comment(slug):
     )
 
 
+@bp.route('/api/recipe/<slug>/visibility', methods=['POST'])
+@login_required
+def recipe_visibility(slug):
+    """Owner-only: set is_public (publish or make private)."""
+    recipe = Recipe.query.filter_by(slug=slug, is_deleted=False).first_or_404()
+    if recipe.creator_id != current_user.id:
+        from flask import abort
+        abort(403)
+
+    data = request.get_json(silent=True) or {}
+    public = bool(data.get('public'))
+
+    if public:
+        if not (recipe.instructions or '').strip():
+            return jsonify(success=False, error='Cannot publish without instructions'), 400
+        if recipe.ingredients.count() == 0:
+            return jsonify(success=False, error='Cannot publish without ingredients'), 400
+
+    recipe.is_public = public
+    db.session.commit()
+    return jsonify(success=True, is_public=recipe.is_public)
+
+
 @bp.route('/recipe/<slug>/save', methods=['POST'])
 @login_required
 def save(slug):
@@ -386,10 +415,37 @@ def save(slug):
 @bp.route('/my-meals')
 @login_required
 def my_meals():
-    recipes = (
+    all_recipes = (
         Recipe.query
         .filter_by(creator_id=current_user.id)
         .order_by(Recipe.created_at.desc())
         .all()
     )
-    return render_template('recipes/my_meals.html', recipes=recipes)
+    ai_private = (
+        Recipe.query
+        .filter_by(
+            creator_id=current_user.id,
+            is_deleted=False,
+            is_ai_generated=True,
+            is_public=False,
+        )
+        .order_by(Recipe.created_at.desc())
+        .all()
+    )
+    ai_public = (
+        Recipe.query
+        .filter_by(
+            creator_id=current_user.id,
+            is_deleted=False,
+            is_ai_generated=True,
+            is_public=True,
+        )
+        .order_by(Recipe.created_at.desc())
+        .all()
+    )
+    return render_template(
+        'recipes/my_meals.html',
+        all_recipes=all_recipes,
+        ai_private=ai_private,
+        ai_public=ai_public,
+    )

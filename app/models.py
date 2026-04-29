@@ -65,6 +65,7 @@ class Recipe(db.Model):
     creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
     is_public = db.Column(db.Boolean, default=True)
     is_deleted = db.Column(db.Boolean, default=False)
+    is_ai_generated = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
     updated_at = db.Column(
         db.DateTime,
