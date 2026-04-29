@@ -85,9 +85,14 @@ class Recipe(db.Model):
 
     def generate_slug(self):
         base = slugify(self.title)
+        if not base or base.strip('-') == '':
+            base = f'recipe-{self.id or "new"}'
+        existing = {r.slug for r in Recipe.query.filter(
+            Recipe.slug.like(f'{base}%')
+        ).with_entities(Recipe.slug).all()}
         slug = base
         counter = 1
-        while Recipe.query.filter_by(slug=slug).first() is not None:
+        while slug in existing:
             slug = f'{base}-{counter}'
             counter += 1
         self.slug = slug
@@ -125,7 +130,7 @@ class MealPlan(db.Model):
     __tablename__ = 'meal_plan'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
     week_start = db.Column(db.Date, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
@@ -139,7 +144,7 @@ class MealPlanItem(db.Model):
     __tablename__ = 'meal_plan_item'
 
     id = db.Column(db.Integer, primary_key=True)
-    mealplan_id = db.Column(db.Integer, db.ForeignKey('meal_plan.id'))
+    mealplan_id = db.Column(db.Integer, db.ForeignKey('meal_plan.id', ondelete='CASCADE'), nullable=False)
     recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
     day_of_week = db.Column(db.Integer, nullable=False)  # 0=Mon .. 6=Sun
     meal_type = db.Column(db.String(20), default='dinner')  # breakfast/lunch/dinner

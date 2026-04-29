@@ -8,6 +8,7 @@ from app.models import (
     MealPlan, MealPlanItem, Recipe, RecipeIngredient, PantryItem,
 )
 from app.planner import bp
+from app.utils import json_body
 
 
 DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
@@ -66,7 +67,7 @@ def planner():
 @bp.route('/api/planner/save', methods=['POST'])
 @login_required
 def planner_save():
-    data = request.get_json(silent=True) or {}
+    data = json_body()
     day = data.get('day')
     meal_type = data.get('meal_type')
     recipe_id = data.get('recipe_id')
@@ -74,7 +75,10 @@ def planner_save():
 
     if day is None or meal_type not in MEAL_TYPES:
         return jsonify(success=False, error='Invalid day or meal_type'), 400
-    day = int(day)
+    try:
+        day = int(day)
+    except (ValueError, TypeError):
+        return jsonify(success=False, error='Invalid day'), 400
     if day < 0 or day > 6:
         return jsonify(success=False, error='Day must be 0-6'), 400
 
@@ -89,10 +93,19 @@ def planner_save():
         db.session.add(item)
 
     if recipe_id:
-        item.recipe_id = int(recipe_id)
+        try:
+            rid = int(recipe_id)
+        except (ValueError, TypeError):
+            return jsonify(success=False, error='Invalid recipe_id'), 400
+        r = Recipe.query.filter_by(id=rid, is_deleted=False).first()
+        if r is None or (not r.is_public and r.creator_id != current_user.id):
+            return jsonify(success=False, error='Recipe not found'), 400
+        item.recipe_id = r.id
         item.custom_text = ''
     else:
         item.recipe_id = None
+        if custom_text and len(custom_text) > 200:
+            custom_text = custom_text[:200]
         item.custom_text = custom_text
 
     db.session.commit()
@@ -114,7 +127,7 @@ def planner_save():
 @bp.route('/api/planner/remove', methods=['POST'])
 @login_required
 def planner_remove():
-    data = request.get_json(silent=True) or {}
+    data = json_body()
     item_id = data.get('item_id')
     if not item_id:
         return jsonify(success=False, error='Missing item_id'), 400

@@ -31,6 +31,8 @@ def ai_suggest():
 
     data = request.get_json(silent=True) or {}
     ingredients = data.get('ingredients', [])
+    if not isinstance(ingredients, list):
+        return jsonify(success=False, error='ingredients must be a list'), 400
     preferences = data.get('preferences', '')
     use_ai = data.get('use_ai', False)
 

@@ -11,6 +11,7 @@ from app import db
 from app.models import Comment, Rating, Recipe, RecipeIngredient, SavedRecipe
 from app.recipes import bp
 from app.recipes.forms import CATEGORY_CHOICES, RecipeForm
+from app.utils import json_body
 
 
 @bp.route('/')
@@ -75,6 +76,8 @@ def api_recipes():
     sort = request.args.get('sort', 'newest', type=str)
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 12, type=int)
+    per_page = max(1, min(per_page, 50))
+    page = max(1, page)
 
     query = Recipe.query.filter_by(is_public=True, is_deleted=False)
 
@@ -304,10 +307,10 @@ def delete(slug):
 @login_required
 def rate(slug):
     recipe = Recipe.query.filter_by(slug=slug, is_deleted=False).first_or_404()
-    data = request.get_json(silent=True) or {}
+    data = json_body()
     score = data.get('score', 0)
 
-    if not isinstance(score, int) or score < 1 or score > 5:
+    if not isinstance(score, int) or isinstance(score, bool) or score < 1 or score > 5:
         return jsonify(success=False, error='Score must be 1-5'), 400
 
     existing = Rating.query.filter_by(
@@ -337,11 +340,13 @@ def rate(slug):
 @login_required
 def comment(slug):
     recipe = Recipe.query.filter_by(slug=slug, is_deleted=False).first_or_404()
-    data = request.get_json(silent=True) or {}
-    body = (data.get('body') or '').strip()
+    data = json_body()
+    body = str(data.get('body') or '').strip()
 
     if not body:
         return jsonify(success=False, error='Comment cannot be empty'), 400
+    if len(body) > 2000:
+        return jsonify(success=False, error='Comment too long (max 2000 chars)'), 400
 
     c = Comment(
         user_id=current_user.id,
