@@ -1,0 +1,39 @@
+<article class="pt-card h-100">
+    <div class="img-ph">
+        {% if recipe.image_filename %}
+        <img src="{{ url_for('static', filename='uploads/' + recipe.image_filename) }}" alt="{{ recipe.title }}">
+        {% endif %}
+    </div>
+    <h3><a href="/recipe/{{ recipe.slug }}" class="text-decoration-none" style="color: var(--pt-text);">{{ recipe.title }}</a></h3>
+    <p>
+        <i class="bi bi-clock"></i> {{ recipe.cooking_time or 30 }} min
+        <span class="badge bg-info ms-2">{{ recipe.category|capitalize }}</span>
+        {% if recipe.is_ai_generated %}
+        <span class="badge badge-ai ms-1">AI</span>
+        {% endif %}
+    </p>
+    <div class="star-rating mb-1">
+        {% set avg = recipe.avg_rating|round(0, 'floor')|int %}
+        {% for i in range(1, 6) %}
+            {% if i <= avg %}
+            <i class="bi bi-star-fill"></i>
+            {% else %}
+            <i class="bi bi-star"></i>
+            {% endif %}
+        {% endfor %}
+        <span class="ms-1 small text-muted-custom">{{ recipe.avg_rating }}</span>
+    </div>
+    {% if recipe.creator %}
+    <p class="mb-0">
+        <small>by <a href="/user/{{ recipe.creator.username }}">{{ recipe.creator.username }}</a></small>
+    </p>
+    {% endif %}
+    {% if pantry_match is defined and pantry_match is not none %}
+    <div class="match mt-2">
+        <small class="text-muted-custom">Pantry match {{ pantry_match }}%</small>
+        <div class="match-bar">
+            <div class="match-fill" style="width: {{ pantry_match }}%;"></div>
+        </div>
+    </div>
+    {% endif %}
+</article>
