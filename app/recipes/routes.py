@@ -417,7 +417,7 @@ def save(slug):
 def my_meals():
     all_recipes = (
         Recipe.query
-        .filter_by(creator_id=current_user.id)
+        .filter_by(creator_id=current_user.id, is_deleted=False)
         .order_by(Recipe.created_at.desc())
         .all()
     )
