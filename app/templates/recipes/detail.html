@@ -31,7 +31,7 @@
             <span class="badge bg-info">{{ recipe.category|capitalize }}</span>
             {% if recipe.creator %}
             <span class="text-muted-custom small">
-                <i class="bi bi-star-fill text-sun"></i> {{ recipe.creator.recipes.count() }} recipes
+                <i class="bi bi-journal-text"></i> {{ recipe.creator.recipes.count() }} recipes
             </span>
             {% endif %}
         </div>
