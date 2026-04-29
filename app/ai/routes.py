@@ -54,6 +54,7 @@ def ai_suggest():
                 user_id=current_user.id,
                 ingredient_name=name,
             ))
+    db.session.commit()
 
     matches = get_pantry_matches(current_user.id)
 
