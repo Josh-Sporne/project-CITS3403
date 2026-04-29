@@ -11,9 +11,8 @@
     let currentRange = 'week';
 
     function safeReload() {
-        modal.hide();
         modalEl.addEventListener('hidden.bs.modal', () => location.reload(), { once: true });
-        setTimeout(() => location.reload(), 400);
+        modal.hide();
     }
 
     /* --- Add-meal buttons --- */
@@ -45,6 +44,9 @@
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) safeReload();
+                })
+                .catch(() => {
+                    showErrorToast('Could not remove meal. Please try again.');
                 });
         }
     });
