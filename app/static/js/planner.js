@@ -25,6 +25,8 @@
             document.getElementById('modalMealLabel').textContent = selectedMeal;
             document.getElementById('recipeSelect').value = '';
             document.getElementById('customText').value = '';
+            document.getElementById('recipeSearch').value = '';
+            document.querySelectorAll('#recipeSelect option').forEach(o => o.hidden = false);
             modal.show();
             return;
         }
@@ -92,6 +94,15 @@
                 this.disabled = false;
                 this.textContent = 'Save';
             });
+    });
+
+    /* --- Recipe search filter --- */
+    document.getElementById('recipeSearch').addEventListener('input', function () {
+        const q = this.value.toLowerCase();
+        document.querySelectorAll('#recipeSelect option').forEach(function (opt) {
+            if (!opt.value) return;
+            opt.hidden = !opt.textContent.toLowerCase().includes(q);
+        });
     });
 
     /* --- Range toggles --- */

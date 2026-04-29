@@ -93,6 +93,8 @@
                 </p>
                 <div class="mb-3">
                     <label class="form-label">Choose a recipe</label>
+                    <input type="text" class="form-control form-control-sm mb-1"
+                           id="recipeSearch" placeholder="Type to search…" autocomplete="off">
                     <select class="form-select" id="recipeSelect">
                         <option value="">— Select recipe —</option>
                         {% for r in recipes %}
