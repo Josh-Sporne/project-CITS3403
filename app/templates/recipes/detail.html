@@ -141,7 +141,7 @@
 <script>
 (function () {
     const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
-    const slug = '{{ recipe.slug }}';
+    const slug = {{ recipe.slug|tojson }};
 
     /* Rating */
     const starContainer = document.getElementById('star-rating');

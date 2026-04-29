@@ -73,7 +73,7 @@
     let currentCategory = '';
     let currentQuery = '';
     let currentSort = 'newest';
-    let totalResults = {{ total }};
+    let totalResults = {{ total|tojson }};
 
     function buildCardHtml(r) {
         const imgBlock = r.image_filename
