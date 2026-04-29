@@ -108,6 +108,7 @@
                 ingredients: ingredients,
                 preferences: buildPreferences(),
                 use_ai: useAi,
+                max_time: parseInt(document.getElementById('maxTime').value) || null,
             }),
         })
             .then(r => r.json())
@@ -150,10 +151,10 @@
                 <div class="col-sm-6 col-lg-4">
                     <div class="pt-card h-100">
                         <div class="img-ph" style="height:60px"></div>
-                        <h3>${m.slug ? '<a href="/recipe/' + m.slug + '">' + m.title + '</a>' : m.title}</h3>
+                        <h3>${m.slug ? '<a href="/recipe/' + escapeHtml(m.slug) + '">' + escapeHtml(m.title) + '</a>' : escapeHtml(m.title)}</h3>
                         <div class="d-flex justify-content-between align-items-center" style="font-size:.72rem">
                             <span class="text-muted-custom"><i class="bi bi-clock"></i> ${m.cooking_time || '—'} min</span>
-                            <span class="badge bg-info">${m.category || ''}</span>
+                            <span class="badge bg-info">${escapeHtml(m.category || '')}</span>
                         </div>
                         <div class="match-bar mt-2">
                             <div class="match-fill" style="width:${m.match_pct}%;background:${color}"></div>

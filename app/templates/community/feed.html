@@ -31,7 +31,7 @@
                                 <button class="btn btn-sm btn-outline-mint ms-2 follow-btn"
                                         data-username="{{ recipe.creator.username }}"
                                         style="font-size:.65rem;padding:.15rem .45rem">
-                                    {% if current_user.is_following(recipe.creator) %}
+                                    {% if recipe.creator_id in followed_ids %}
                                     Unfollow
                                     {% else %}
                                     Follow
@@ -40,7 +40,8 @@
                                 {% endif %}
                                 {% endif %}
                             </div>
-                            <small class="text-muted-custom" style="font-size:.72rem">
+                            <small class="text-muted-custom" style="font-size:.72rem"
+                                   data-timestamp="{{ recipe.created_at.isoformat() if recipe.created_at else '' }}">
                                 {{ recipe.created_at.strftime('%b %d, %Y') if recipe.created_at else '' }}
                             </small>
                         </div>
@@ -50,12 +51,13 @@
 
                         <!-- Recipe Preview Card -->
                         <div class="pt-card mt-2">
-                            {% if recipe.image_filename %}
-                            <img src="{{ url_for('static', filename='uploads/' + recipe.image_filename) }}"
-                                 alt="{{ recipe.title }}">
-                            {% else %}
-                            <div class="img-ph"></div>
-                            {% endif %}
+                            <div class="img-ph">
+                                {% if recipe.image_filename %}
+                                <img src="{{ url_for('static', filename='uploads/' + recipe.image_filename) }}"
+                                     alt="{{ recipe.title }}"
+                                     style="width:100%;height:100%;object-fit:cover;border-radius:inherit">
+                                {% endif %}
+                            </div>
                             <h3>
                                 {% if recipe.slug %}
                                 <a href="/recipe/{{ recipe.slug }}">{{ recipe.title }}</a>
@@ -91,6 +93,13 @@
             </div>
         </div>
         {% endfor %}
+        {% if has_next %}
+        <div class="text-center mt-3 mb-2">
+            <a href="?page={{ next_page }}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-down-circle"></i> Load More
+            </a>
+        </div>
+        {% endif %}
         {% else %}
         <div class="card">
             <div class="card-body text-center py-5">
@@ -140,6 +149,23 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+(function () {
+    function timeAgo(isoStr) {
+        if (!isoStr) return '';
+        const diff = (Date.now() - new Date(isoStr)) / 1000;
+        if (diff < 60)     return 'just now';
+        if (diff < 3600)   return Math.floor(diff / 60) + ' min ago';
+        if (diff < 86400)  return Math.floor(diff / 3600) + ' hr ago';
+        if (diff < 604800) return Math.floor(diff / 86400) + ' days ago';
+        return new Date(isoStr).toLocaleDateString();
+    }
+    document.querySelectorAll('[data-timestamp]').forEach(function (el) {
+        const ts = el.dataset.timestamp;
+        if (ts) el.textContent = timeAgo(ts);
+    });
+})();
+</script>
 <script>
 (function () {
     const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';

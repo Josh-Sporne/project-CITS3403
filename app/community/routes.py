@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from flask import render_template, jsonify
+from flask import render_template, jsonify, request
 from flask_login import login_required, current_user
 
 from app import db
@@ -17,11 +17,12 @@ def feed():
     ).order_by(Recipe.created_at.desc())
 
     followed_recipes = []
+    followed_ids = set()
     if current_user.is_authenticated:
-        followed_ids = [
+        followed_ids = {
             f.followed_id for f in
             Follower.query.filter_by(follower_id=current_user.id).all()
-        ]
+        }
         if followed_ids:
             followed_recipes = Recipe.query.filter(
                 Recipe.creator_id.in_(followed_ids),
@@ -29,7 +30,9 @@ def feed():
                 Recipe.is_deleted == False,  # noqa: E712
             ).order_by(Recipe.created_at.desc()).limit(20).all()
 
-    recent_recipes = recipes_query.limit(20).all()
+    page = request.args.get('page', 1, type=int)
+    recipes_page = recipes_query.paginate(page=page, per_page=12, error_out=False)
+    recent_recipes = recipes_page.items
 
     if followed_recipes:
         seen = {r.id for r in followed_recipes}
@@ -45,7 +48,6 @@ def feed():
     leaderboard = (
         db.session.query(
             User.username,
-            User.email,
             func.count(Recipe.id).label('recipe_count')
         )
         .join(Recipe, Recipe.creator_id == User.id)
@@ -54,7 +56,7 @@ def feed():
             Recipe.is_deleted == False,  # noqa: E712
             Recipe.created_at >= month_start,
         )
-        .group_by(User.id, User.username, User.email)
+        .group_by(User.id, User.username)
         .order_by(func.count(Recipe.id).desc())
         .limit(10)
         .all()
@@ -64,6 +66,9 @@ def feed():
         'community/feed.html',
         recipes=recent_recipes,
         leaderboard=leaderboard,
+        followed_ids=followed_ids,
+        has_next=recipes_page.has_next,
+        next_page=recipes_page.next_num,
     )
 
 
