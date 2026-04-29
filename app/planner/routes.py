@@ -119,7 +119,7 @@ def planner_remove():
     if not item_id:
         return jsonify(success=False, error='Missing item_id'), 400
 
-    item = MealPlanItem.query.get(int(item_id))
+    item = db.session.get(MealPlanItem, int(item_id))
     if item is None:
         return jsonify(success=False, error='Not found'), 404
 
@@ -135,6 +135,16 @@ def planner_remove():
 @login_required
 def grocery():
     return render_template('planner/grocery.html')
+
+
+def _smart_quantity(quantities):
+    if not quantities:
+        return ''
+    try:
+        total = sum(float(q) for q in quantities if str(q).strip())
+        return f'{total:g}'
+    except (ValueError, TypeError):
+        return ' + '.join(str(q) for q in quantities if str(q).strip())
 
 
 @bp.route('/api/grocery-list')
@@ -183,7 +193,7 @@ def grocery_list():
             excluded_count += 1
         grocery_items.append({
             'name': info['name'],
-            'quantity': ', '.join(info['quantities']) if info['quantities'] else '',
+            'quantity': _smart_quantity(info['quantities']),
             'unit': info['unit'],
             'in_pantry': in_pantry,
         })
