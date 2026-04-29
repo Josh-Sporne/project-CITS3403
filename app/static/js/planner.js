@@ -100,9 +100,18 @@
             document.querySelectorAll('.range-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             currentRange = this.dataset.range;
+            applyRangeToGrid(currentRange);
             fetchGroceryPreview();
         });
     });
+
+    function applyRangeToGrid(range) {
+        const todayIdx = (new Date().getDay() + 6) % 7;
+        document.querySelectorAll('.day-slot').forEach(col => {
+            const dayIdx = parseInt(col.dataset.day, 10);
+            col.style.display = (range === 'day' && dayIdx !== todayIdx) ? 'none' : '';
+        });
+    }
 
     /* --- Grocery preview --- */
     function fetchGroceryPreview() {
@@ -135,5 +144,6 @@
             });
     }
 
+    applyRangeToGrid(currentRange);
     fetchGroceryPreview();
 })();
