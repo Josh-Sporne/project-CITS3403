@@ -175,6 +175,9 @@ def grocery_list():
     for item in items:
         if not item.recipe_id:
             continue
+        recipe = Recipe.query.filter_by(id=item.recipe_id, is_deleted=False).first()
+        if not recipe:
+            continue
         for ri in RecipeIngredient.query.filter_by(recipe_id=item.recipe_id).all():
             key = ri.name.lower().strip()
             if key not in ingredient_map:
