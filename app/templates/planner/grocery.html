@@ -63,10 +63,10 @@
                 if (needed.length === 0) {
                     listEl.innerHTML = '<p class="text-muted-custom" style="font-size:.85rem">No ingredients needed — add meals to your planner first.</p>';
                 } else {
-                    listEl.innerHTML = needed.map(item => `
+                    listEl.innerHTML = needed.map((item, i) => `
                         <div class="form-check mb-2 grocery-row">
-                            <input class="form-check-input" type="checkbox" id="gi-${item.name}">
-                            <label class="form-check-label" for="gi-${item.name}" style="font-size:.85rem">
+                            <input class="form-check-input" type="checkbox" id="gi-${i}">
+                            <label class="form-check-label" for="gi-${i}" style="font-size:.85rem">
                                 <span class="grocery-name">${item.name}</span>
                                 ${item.quantity ? `<span class="text-muted-custom ms-1" style="font-size:.75rem">${item.quantity} ${item.unit}</span>` : ''}
                             </label>
