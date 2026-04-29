@@ -17,11 +17,12 @@ def feed():
     ).order_by(Recipe.created_at.desc())
 
     followed_recipes = []
+    followed_ids = set()
     if current_user.is_authenticated:
-        followed_ids = [
+        followed_ids = {
             f.followed_id for f in
             Follower.query.filter_by(follower_id=current_user.id).all()
-        ]
+        }
         if followed_ids:
             followed_recipes = Recipe.query.filter(
                 Recipe.creator_id.in_(followed_ids),
@@ -64,6 +65,7 @@ def feed():
         'community/feed.html',
         recipes=recent_recipes,
         leaderboard=leaderboard,
+        followed_ids=followed_ids,
     )
 
 

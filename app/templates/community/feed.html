@@ -31,7 +31,7 @@
                                 <button class="btn btn-sm btn-outline-mint ms-2 follow-btn"
                                         data-username="{{ recipe.creator.username }}"
                                         style="font-size:.65rem;padding:.15rem .45rem">
-                                    {% if current_user.is_following(recipe.creator) %}
+                                    {% if recipe.creator_id in followed_ids %}
                                     Unfollow
                                     {% else %}
                                     Follow
