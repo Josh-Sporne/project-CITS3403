@@ -108,6 +108,7 @@
                 ingredients: ingredients,
                 preferences: buildPreferences(),
                 use_ai: useAi,
+                max_time: parseInt(document.getElementById('maxTime').value) || null,
             }),
         })
             .then(r => r.json())

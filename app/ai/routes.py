@@ -56,7 +56,8 @@ def ai_suggest():
             ))
     db.session.commit()
 
-    matches = get_pantry_matches(current_user.id)
+    max_time = data.get('max_time')
+    matches = get_pantry_matches(current_user.id, max_time=max_time)
 
     ai_suggestions = []
     if use_ai:
