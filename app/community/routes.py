@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from flask import render_template, jsonify
+from flask import render_template, jsonify, request
 from flask_login import login_required, current_user
 
 from app import db
@@ -30,7 +30,9 @@ def feed():
                 Recipe.is_deleted == False,  # noqa: E712
             ).order_by(Recipe.created_at.desc()).limit(20).all()
 
-    recent_recipes = recipes_query.limit(20).all()
+    page = request.args.get('page', 1, type=int)
+    recipes_page = recipes_query.paginate(page=page, per_page=12, error_out=False)
+    recent_recipes = recipes_page.items
 
     if followed_recipes:
         seen = {r.id for r in followed_recipes}
@@ -65,6 +67,8 @@ def feed():
         recipes=recent_recipes,
         leaderboard=leaderboard,
         followed_ids=followed_ids,
+        has_next=recipes_page.has_next,
+        next_page=recipes_page.next_num,
     )
 
 
