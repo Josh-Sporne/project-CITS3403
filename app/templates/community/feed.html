@@ -40,7 +40,8 @@
                                 {% endif %}
                                 {% endif %}
                             </div>
-                            <small class="text-muted-custom" style="font-size:.72rem">
+                            <small class="text-muted-custom" style="font-size:.72rem"
+                                   data-timestamp="{{ recipe.created_at.isoformat() if recipe.created_at else '' }}">
                                 {{ recipe.created_at.strftime('%b %d, %Y') if recipe.created_at else '' }}
                             </small>
                         </div>
@@ -147,6 +148,23 @@
 {% endblock %}
 
 {% block scripts %}
+<script>
+(function () {
+    function timeAgo(isoStr) {
+        if (!isoStr) return '';
+        const diff = (Date.now() - new Date(isoStr)) / 1000;
+        if (diff < 60)     return 'just now';
+        if (diff < 3600)   return Math.floor(diff / 60) + ' min ago';
+        if (diff < 86400)  return Math.floor(diff / 3600) + ' hr ago';
+        if (diff < 604800) return Math.floor(diff / 86400) + ' days ago';
+        return new Date(isoStr).toLocaleDateString();
+    }
+    document.querySelectorAll('[data-timestamp]').forEach(function (el) {
+        const ts = el.dataset.timestamp;
+        if (ts) el.textContent = timeAgo(ts);
+    });
+})();
+</script>
 <script>
 (function () {
     const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
