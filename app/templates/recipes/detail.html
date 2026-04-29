@@ -13,15 +13,11 @@
 <!-- Title & Meta -->
 <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
     <div>
-<<<<<<< HEAD
-        <h1 class="fw-800 mb-2">{{ recipe.title }}</h1>
-=======
         <h1 class="fw-800 mb-2 d-flex flex-wrap align-items-center gap-2">{{ recipe.title }}
             {% if recipe.is_ai_generated %}
             <span class="badge badge-ai">AI generated</span>
             {% endif %}
         </h1>
->>>>>>> origin/main
         <div class="d-flex flex-wrap align-items-center gap-3">
             {% if recipe.creator %}
             <div class="d-flex align-items-center gap-2">
@@ -40,19 +36,13 @@
             {% endif %}
         </div>
     </div>
-<<<<<<< HEAD
-    <div class="d-flex gap-2">
-=======
     <div class="d-flex flex-wrap gap-2">
->>>>>>> origin/main
         {% if current_user.is_authenticated %}
         <button id="save-btn" class="btn btn-sm {% if user_saved %}btn-mint{% else %}btn-outline-mint{% endif %}">
             <i class="bi bi-bookmark{% if user_saved %}-fill{% endif %} me-1"></i>
             <span id="save-text">{{ 'Saved' if user_saved else 'Save Recipe' }}</span>
         </button>
         {% endif %}
-<<<<<<< HEAD
-=======
         {% if current_user.is_authenticated and recipe.creator_id == current_user.id and not recipe.is_deleted %}
             {% if not recipe.is_public %}
             <button type="button" id="recipe-publish-btn" class="btn btn-sm btn-mint" data-slug="{{ recipe.slug }}">
@@ -64,7 +54,6 @@
             </button>
             {% endif %}
         {% endif %}
->>>>>>> origin/main
         <a href="/planner" class="btn btn-sm btn-outline-light">
             <i class="bi bi-calendar-plus me-1"></i> Add to Meal Plan
         </a>
@@ -263,8 +252,6 @@
             });
         });
     }
-<<<<<<< HEAD
-=======
 
     function postVisibility(publicVal) {
         return fetch(`/api/recipe/${slug}/visibility`, {
@@ -296,7 +283,6 @@
             }).catch(() => { alert('Network error.'); unpubBtn.disabled = false; });
         });
     }
->>>>>>> origin/main
 })();
 </script>
 {% endblock %}
