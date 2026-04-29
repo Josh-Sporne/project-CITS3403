@@ -46,7 +46,6 @@ def feed():
     leaderboard = (
         db.session.query(
             User.username,
-            User.email,
             func.count(Recipe.id).label('recipe_count')
         )
         .join(Recipe, Recipe.creator_id == User.id)
@@ -55,7 +54,7 @@ def feed():
             Recipe.is_deleted == False,  # noqa: E712
             Recipe.created_at >= month_start,
         )
-        .group_by(User.id, User.username, User.email)
+        .group_by(User.id, User.username)
         .order_by(func.count(Recipe.id).desc())
         .limit(10)
         .all()
