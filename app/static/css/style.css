@@ -843,7 +843,7 @@ footer p {
 }
 
 .pt-card .img-ph {
-  height: 100px;
+  height: 160px;
   border-radius: 12px;
   background: linear-gradient(120deg, var(--pt-coral), var(--pt-violet));
   margin-bottom: 0.65rem;
@@ -2831,7 +2831,7 @@ footer p {
 }
 
 .pt-card .img-ph {
-  height: 100px;
+  height: 160px;
   border-radius: 12px;
   background: linear-gradient(120deg, var(--pt-coral), var(--pt-violet));
   margin-bottom: 0.65rem;

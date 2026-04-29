@@ -1,9 +1,9 @@
 <article class="pt-card h-100">
-    <div class="img-ph">
-        {% if recipe.image_filename %}
-        <img src="{{ url_for('static', filename='uploads/' + recipe.image_filename) }}" alt="{{ recipe.title }}">
-        {% endif %}
-    </div>
+    {% if recipe.image_filename %}
+    <img src="{{ url_for('static', filename='uploads/' + recipe.image_filename) }}" alt="{{ recipe.title }}">
+    {% else %}
+    <div class="img-ph"></div>
+    {% endif %}
     <h3><a href="/recipe/{{ recipe.slug }}" class="text-decoration-none" style="color: var(--pt-text);">{{ recipe.title }}</a></h3>
     <p>
         <i class="bi bi-clock"></i> {{ recipe.cooking_time or 30 }} min
