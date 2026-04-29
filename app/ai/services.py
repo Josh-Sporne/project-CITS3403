@@ -1,7 +1,10 @@
 import json
 
+from flask import current_app
+from sqlalchemy.orm import selectinload
+
 from app import db
-from app.models import Recipe, RecipeIngredient, PantryItem
+from app.models import Recipe, PantryItem
 from app.ai.recipe_defaults import (
     DEFAULT_AI_CATEGORY,
     DEFAULT_AI_COOKING_TIME,
@@ -14,7 +17,7 @@ from app.recipes.forms import CATEGORY_CHOICES
 _VALID_CATEGORIES = {c[0] for c in CATEGORY_CHOICES}
 
 
-def get_pantry_matches(user_id):
+def get_pantry_matches(user_id, max_time=None):
     pantry_names = {
         p.ingredient_name.lower()
         for p in PantryItem.query.filter_by(user_id=user_id).all()
@@ -22,15 +25,18 @@ def get_pantry_matches(user_id):
     if not pantry_names:
         return []
 
-    recipes = Recipe.query.filter_by(
+    query = Recipe.query.filter_by(
         is_public=True, is_deleted=False
-    ).all()
+    ).options(selectinload(Recipe.ingredients))
+
+    if max_time:
+        query = query.filter(Recipe.cooking_time <= int(max_time))
+
+    recipes = query.all()
 
     results = []
     for recipe in recipes:
-        ingredients = RecipeIngredient.query.filter_by(
-            recipe_id=recipe.id
-        ).all()
+        ingredients = recipe.ingredients
         total = len(ingredients)
         if total == 0:
             continue
@@ -156,5 +162,6 @@ def get_ai_suggestions(ingredients, preferences, api_key):
         suggestions = json.loads(text)
         return suggestions if isinstance(suggestions, list) else []
 
-    except Exception:
+    except Exception as e:
+        current_app.logger.exception('get_ai_suggestions failed: %s', e)
         return []
