@@ -20,7 +20,7 @@ def _monday_of_week(d=None):
     return d - timedelta(days=d.weekday())
 
 
-def _get_or_create_plan(user_id, week_start=None):
+def _get_or_create_plan(user_id, week_start=None, commit=True):
     week_start = week_start or _monday_of_week()
     plan = MealPlan.query.filter_by(
         user_id=user_id, week_start=week_start
@@ -28,14 +28,15 @@ def _get_or_create_plan(user_id, week_start=None):
     if plan is None:
         plan = MealPlan(user_id=user_id, week_start=week_start)
         db.session.add(plan)
-        db.session.commit()
+        if commit:
+            db.session.commit()
     return plan
 
 
 @bp.route('/planner')
 @login_required
 def planner():
-    plan = _get_or_create_plan(current_user.id)
+    plan = _get_or_create_plan(current_user.id, commit=False)
     items = MealPlanItem.query.filter_by(mealplan_id=plan.id).all()
 
     grid = {}
