@@ -122,21 +122,33 @@
             <button type="button" class="btn btn-sm btn-outline-coral remove-ingredient" title="Remove"><i class="bi bi-x-lg"></i></button>
         </div>`;
 
+    function updateRemoveButtons() {
+        const rows = container.querySelectorAll('.ingredient-row');
+        const onlyOne = rows.length === 1;
+        rows.forEach(row => {
+            const btn = row.querySelector('.remove-ingredient');
+            if (!btn) return;
+            btn.disabled = onlyOne;
+            btn.title = onlyOne ? 'At least one ingredient is required' : 'Remove';
+        });
+    }
+
     addBtn.addEventListener('click', () => {
         container.insertAdjacentHTML('beforeend', rowHtml);
+        updateRemoveButtons();
     });
 
     container.addEventListener('click', (e) => {
         const removeBtn = e.target.closest('.remove-ingredient');
-        if (removeBtn) {
-            const row = removeBtn.closest('.ingredient-row');
-            if (container.querySelectorAll('.ingredient-row').length > 1) {
-                row.remove();
-            } else {
-                row.querySelectorAll('input').forEach(inp => inp.value = '');
-            }
+        if (!removeBtn) return;
+        const rows = container.querySelectorAll('.ingredient-row');
+        if (rows.length > 1) {
+            removeBtn.closest('.ingredient-row').remove();
+            updateRemoveButtons();
         }
     });
+
+    updateRemoveButtons();
 })();
 </script>
 {% endblock %}
