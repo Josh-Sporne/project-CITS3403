@@ -109,6 +109,13 @@
 {% endblock %}
 
 {% block scripts %}
+<style>
+    .remove-ingredient:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+</style>
 <script>
 (function () {
     const container = document.getElementById('ingredients-container');
