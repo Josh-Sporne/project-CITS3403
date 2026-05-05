@@ -43,6 +43,9 @@
             <span id="save-text">{{ 'Saved' if user_saved else 'Save Recipe' }}</span>
         </button>
         {% endif %}
+        <button id="share-btn" type="button" class="btn btn-sm btn-outline-light">
+            <i class="bi bi-share me-1"></i> Share
+        </button>
         {% if current_user.is_authenticated and recipe.creator_id == current_user.id and not recipe.is_deleted %}
             {% if not recipe.is_public %}
             <button type="button" id="recipe-publish-btn" class="btn btn-sm btn-mint" data-slug="{{ recipe.slug }}">
@@ -285,12 +288,34 @@
     const unpubBtn = document.getElementById('recipe-unpublish-btn');
     if (unpubBtn) {
         unpubBtn.addEventListener('click', () => {
-            if (!confirm('Make this recipe private? It will no longer appear in Discover.')) return;
+            if (!confirm('Make this recipe private? It will no longer be visible to others.')) return;
             unpubBtn.disabled = true;
             postVisibility(false).then(res => {
                 if (res.ok && res.data.success) window.location.reload();
-                else { alert(res.data.error || 'Could not update.'); unpubBtn.disabled = false; }
+                else { alert(res.data.error || 'Could not make private.'); unpubBtn.disabled = false; }
             }).catch(() => { alert('Network error.'); unpubBtn.disabled = false; });
+        });
+    }
+
+    /* Share — copy recipe URL to clipboard */
+    const shareBtn = document.getElementById('share-btn');
+    if (shareBtn) {
+        const originalHtml = shareBtn.innerHTML;
+        shareBtn.addEventListener('click', async () => {
+            const url = window.location.href;
+            try {
+                await navigator.clipboard.writeText(url);
+                shareBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Copied!';
+                shareBtn.classList.add('btn-mint');
+                shareBtn.classList.remove('btn-outline-light');
+                setTimeout(() => {
+                    shareBtn.innerHTML = originalHtml;
+                    shareBtn.classList.remove('btn-mint');
+                    shareBtn.classList.add('btn-outline-light');
+                }, 1800);
+            } catch (err) {
+                window.prompt('Copy this link:', url);
+            }
         });
     }
 })();
