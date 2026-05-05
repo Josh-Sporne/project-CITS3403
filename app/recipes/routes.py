@@ -1,5 +1,6 @@
 import os
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from flask import (
     current_app, flash, jsonify, redirect, render_template, request, url_for,
@@ -30,10 +31,12 @@ def home():
         .all()
     )
 
+    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
     new_recipes = (
         base
+        .filter(Recipe.created_at >= seven_days_ago)
         .order_by(Recipe.created_at.desc())
-        .limit(3)
+        .limit(6)
         .all()
     )
 
