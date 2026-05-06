@@ -49,17 +49,18 @@ def home():
 
 @bp.route('/discover')
 def discover():
-    page = request.args.get('page', 1, type=int)
+    page = max(request.args.get('page', 1, type=int), 1)
     per_page = 12
 
     query = Recipe.query.filter_by(is_public=True, is_deleted=False)
     total = query.count()
 
+    # Return recipes 1..page cumulatively so deep links like /discover?page=3
+    # land the user on a page that already shows everything up to that point.
     recipes = (
         query
         .order_by(Recipe.created_at.desc())
-        .offset((page - 1) * per_page)
-        .limit(per_page)
+        .limit(page * per_page)
         .all()
     )
 
@@ -68,6 +69,8 @@ def discover():
         recipes=recipes,
         categories=CATEGORY_CHOICES,
         total=total,
+        page=page,
+        per_page=per_page,
     )
 
 
