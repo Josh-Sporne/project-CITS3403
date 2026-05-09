@@ -108,9 +108,19 @@
 <section class="pt-panel mb-4">
     <h3 class="mb-3"><i class="bi bi-star me-2 text-sun"></i>Ratings</h3>
     <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
-        <div class="star-rating" {% if current_user.is_authenticated %}data-interactive="true"{% endif %} id="star-rating">
+        <div class="star-rating"
+             {% if current_user.is_authenticated %}data-interactive="true" role="radiogroup" aria-label="Rate this recipe"{% endif %}
+             id="star-rating">
             {% for i in range(1, 6) %}
-            <i class="bi bi-star{% if i <= avg_rating|round(0, 'floor')|int %}-fill{% endif %}" data-value="{{ i }}" style="cursor:{% if current_user.is_authenticated %}pointer{% else %}default{% endif %};font-size:1.4rem;"></i>
+            <i class="bi bi-star{% if i <= avg_rating|round(0, 'floor')|int %}-fill{% endif %}"
+               data-value="{{ i }}"
+               style="cursor:{% if current_user.is_authenticated %}pointer{% else %}default{% endif %};font-size:1.4rem;"
+               {% if current_user.is_authenticated %}
+               role="radio"
+               tabindex="0"
+               aria-label="Rate {{ i }} star{{ 's' if i != 1 else '' }}"
+               aria-checked="{{ 'true' if user_rating == i else 'false' }}"
+               {% endif %}></i>
             {% endfor %}
         </div>
         <span class="fw-bold" id="avg-rating-text">{{ avg_rating }}</span>
@@ -151,6 +161,14 @@
 {% endblock %}
 
 {% block scripts %}
+<style>
+    /* Visible keyboard-focus indicator for star rating (a11y). */
+    .star-rating [role="radio"]:focus-visible {
+        outline: 2px solid var(--pt-mint, #6ee7b7);
+        outline-offset: 2px;
+        border-radius: 3px;
+    }
+</style>
 <script>
 (function () {
     const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
@@ -160,26 +178,48 @@
     const starContainer = document.getElementById('star-rating');
     if (starContainer && starContainer.dataset.interactive) {
         const stars = starContainer.querySelectorAll('i[data-value]');
+
+        function submitRating(score) {
+            fetch(`/recipe/${slug}/rate`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+                body: JSON.stringify({score}),
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('avg-rating-text').textContent = data.avg_rating;
+                    document.getElementById('rating-count-text').textContent =
+                        `(${data.rating_count} rating${data.rating_count !== 1 ? 's' : ''})`;
+                    const filled = Math.round(data.avg_rating);
+                    stars.forEach((s, idx) => {
+                        s.className = idx < filled ? 'bi bi-star-fill' : 'bi bi-star';
+                        s.setAttribute('aria-checked', String(parseInt(s.dataset.value, 10) === score));
+                    });
+                }
+            });
+        }
+
         stars.forEach(star => {
             star.addEventListener('click', () => {
-                const score = parseInt(star.dataset.value, 10);
-                fetch(`/recipe/${slug}/rate`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
-                    body: JSON.stringify({score}),
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        document.getElementById('avg-rating-text').textContent = data.avg_rating;
-                        document.getElementById('rating-count-text').textContent =
-                            `(${data.rating_count} rating${data.rating_count !== 1 ? 's' : ''})`;
-                        const filled = Math.round(data.avg_rating);
-                        stars.forEach((s, idx) => {
-                            s.className = idx < filled ? 'bi bi-star-fill' : 'bi bi-star';
-                        });
-                    }
-                });
+                submitRating(parseInt(star.dataset.value, 10));
+            });
+
+            star.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();  // stop Space scrolling the page
+                    submitRating(parseInt(star.dataset.value, 10));
+                } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    const idx = Array.from(stars).indexOf(star);
+                    const next = stars[Math.min(idx + 1, stars.length - 1)];
+                    next.focus();
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    const idx = Array.from(stars).indexOf(star);
+                    const prev = stars[Math.max(idx - 1, 0)];
+                    prev.focus();
+                }
             });
 
             star.addEventListener('mouseenter', () => {
