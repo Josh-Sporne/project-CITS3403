@@ -128,7 +128,7 @@
     <div id="comments-list">
         {% for c in comments %}
         <div class="review">
-            <strong>@{{ c.author.username }}</strong>
+            <strong><a href="{{ url_for('auth.public_profile', username=c.author.username) }}" class="text-decoration-none" style="color:var(--pt-text);">@{{ c.author.username }}</a></strong>
             <span class="text-muted-custom small ms-2">{{ c.created_at.strftime('%b %d, %Y') if c.created_at else '' }}</span>
             <p class="mb-0 mt-1">{{ c.body }}</p>
         </div>
@@ -223,13 +223,31 @@
                     const dt = data.comment.created_at ? new Date(data.comment.created_at) : new Date();
                     const dateStr = dt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
 
+                    // Build DOM with createElement/textContent so user-supplied
+                    // strings are NEVER parsed as HTML (XSS safe).
                     const div = document.createElement('div');
                     div.className = 'review';
-                    div.innerHTML = `
-                        <strong>@${data.comment.author}</strong>
-                        <span class="text-muted-custom small ms-2">${dateStr}</span>
-                        <p class="mb-0 mt-1">${data.comment.body}</p>
-                    `;
+
+                    const strong = document.createElement('strong');
+                    const authorLink = document.createElement('a');
+                    authorLink.href = '/user/' + encodeURIComponent(data.comment.author);
+                    authorLink.className = 'text-decoration-none';
+                    authorLink.style.color = 'var(--pt-text)';
+                    authorLink.textContent = '@' + data.comment.author;
+                    strong.appendChild(authorLink);
+
+                    const dateSpan = document.createElement('span');
+                    dateSpan.className = 'text-muted-custom small ms-2';
+                    dateSpan.textContent = dateStr;
+
+                    const body = document.createElement('p');
+                    body.className = 'mb-0 mt-1';
+                    body.textContent = data.comment.body;
+
+                    div.appendChild(strong);
+                    div.appendChild(dateSpan);
+                    div.appendChild(body);
+
                     commentsList.insertBefore(div, commentsList.firstChild);
                     commentInput.value = '';
                 }
