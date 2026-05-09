@@ -196,8 +196,12 @@
                         s.className = idx < filled ? 'bi bi-star-fill' : 'bi bi-star';
                         s.setAttribute('aria-checked', String(parseInt(s.dataset.value, 10) === score));
                     });
+                    showToast('Thanks for rating!');
+                } else if (data.error) {
+                    showErrorToast(data.error);
                 }
-            });
+            })
+            .catch(() => showErrorToast('Could not submit rating.'));
         }
 
         stars.forEach(star => {
@@ -249,6 +253,11 @@
             const body = commentInput.value.trim();
             if (!body) return;
 
+            // Prevent double-submit while the request is in flight.
+            commentBtn.disabled = true;
+            const originalBtnHtml = commentBtn.innerHTML;
+            commentBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Posting…';
+
             fetch(`/recipe/${slug}/comment`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
@@ -256,6 +265,8 @@
             })
             .then(r => r.json())
             .then(data => {
+                commentBtn.disabled = false;
+                commentBtn.innerHTML = originalBtnHtml;
                 if (data.success) {
                     const noMsg = document.getElementById('no-comments-msg');
                     if (noMsg) noMsg.remove();
@@ -290,7 +301,18 @@
 
                     commentsList.insertBefore(div, commentsList.firstChild);
                     commentInput.value = '';
+
+                    // Brief mint flash so the user sees their comment landed.
+                    div.classList.add('highlight');
+                    setTimeout(() => div.classList.remove('highlight'), 1700);
+                } else if (data.error) {
+                    showErrorToast(data.error);
                 }
+            })
+            .catch(() => {
+                commentBtn.disabled = false;
+                commentBtn.innerHTML = originalBtnHtml;
+                showErrorToast('Could not post comment. Please try again.');
             });
         });
     }
