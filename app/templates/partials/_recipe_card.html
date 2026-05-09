@@ -13,14 +13,17 @@
         {% endif %}
     </p>
     <div class="star-rating mb-1">
-        {% set avg = recipe.avg_rating|round(0, 'floor')|int %}
-        {% for i in range(1, 6) %}
-            {% if i <= avg %}
-            <i class="bi bi-star-fill"></i>
-            {% else %}
-            <i class="bi bi-star"></i>
-            {% endif %}
-        {% endfor %}
+        <span title="Average rating: {{ recipe.avg_rating|round(1) }} out of 5"
+              aria-label="Average rating: {{ recipe.avg_rating|round(1) }} out of 5">
+            {% set avg = recipe.avg_rating|round(0, 'floor')|int %}
+            {% for i in range(1, 6) %}
+                {% if i <= avg %}
+                <i class="bi bi-star-fill" aria-hidden="true"></i>
+                {% else %}
+                <i class="bi bi-star" aria-hidden="true"></i>
+                {% endif %}
+            {% endfor %}
+        </span>
         <span class="ms-1 small text-muted-custom">{{ recipe.avg_rating }}</span>
     </div>
     {% if recipe.creator %}
