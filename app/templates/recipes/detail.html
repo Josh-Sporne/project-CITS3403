@@ -28,7 +28,11 @@
             <span class="text-muted-custom">
                 <i class="bi bi-clock me-1"></i>{{ recipe.cooking_time or 30 }} min
             </span>
-            <span class="badge bg-info">{{ recipe.category|capitalize }}</span>
+            {% if recipe.category %}
+            <a href="{{ url_for('recipes.discover') }}?category={{ recipe.category|lower }}"
+               class="badge bg-info text-decoration-none"
+               title="Filter by {{ recipe.category|capitalize }}">{{ recipe.category|capitalize }}</a>
+            {% endif %}
             {% if recipe.creator %}
             <span class="text-muted-custom small">
                 <i class="bi bi-journal-text"></i> {{ recipe.creator.recipes.count() }} recipes
