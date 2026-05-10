@@ -61,16 +61,16 @@
                     <div id="ingredients-container">
                         {% if edit and ingredients %}
                             {% for ing in ingredients %}
-                            <div class="ingredient-row d-flex gap-2 mb-2 align-items-center">
-                                <input type="text" name="ingredient_name[]" class="form-control" placeholder="Ingredient" value="{{ ing.name }}">
+                            <div class="ingredient-row d-flex flex-wrap gap-2 mb-2 align-items-center">
+                                <input type="text" name="ingredient_name[]" class="form-control" style="min-width:200px;flex:1 1 200px;" placeholder="Ingredient" value="{{ ing.name }}">
                                 <input type="text" name="ingredient_qty[]" class="form-control" style="max-width:100px;" placeholder="Qty" value="{{ ing.quantity }}">
                                 <input type="text" name="ingredient_unit[]" class="form-control" style="max-width:100px;" placeholder="Unit" value="{{ ing.unit }}">
                                 <button type="button" class="btn btn-sm btn-outline-coral remove-ingredient" title="Remove"><i class="bi bi-x-lg"></i></button>
                             </div>
                             {% endfor %}
                         {% else %}
-                            <div class="ingredient-row d-flex gap-2 mb-2 align-items-center">
-                                <input type="text" name="ingredient_name[]" class="form-control" placeholder="Ingredient">
+                            <div class="ingredient-row d-flex flex-wrap gap-2 mb-2 align-items-center">
+                                <input type="text" name="ingredient_name[]" class="form-control" style="min-width:200px;flex:1 1 200px;" placeholder="Ingredient">
                                 <input type="text" name="ingredient_qty[]" class="form-control" style="max-width:100px;" placeholder="Qty">
                                 <input type="text" name="ingredient_unit[]" class="form-control" style="max-width:100px;" placeholder="Unit">
                                 <button type="button" class="btn btn-sm btn-outline-coral remove-ingredient" title="Remove"><i class="bi bi-x-lg"></i></button>
@@ -109,34 +109,54 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/validation.js') }}"></script>
+<style>
+    .remove-ingredient:disabled {
+        opacity: 0.35;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+</style>
 <script>
 (function () {
     const container = document.getElementById('ingredients-container');
     const addBtn = document.getElementById('add-ingredient');
 
     const rowHtml = `
-        <div class="ingredient-row d-flex gap-2 mb-2 align-items-center">
-            <input type="text" name="ingredient_name[]" class="form-control" placeholder="Ingredient">
+        <div class="ingredient-row d-flex flex-wrap gap-2 mb-2 align-items-center">
+            <input type="text" name="ingredient_name[]" class="form-control" style="min-width:200px;flex:1 1 200px;" placeholder="Ingredient">
             <input type="text" name="ingredient_qty[]" class="form-control" style="max-width:100px;" placeholder="Qty">
             <input type="text" name="ingredient_unit[]" class="form-control" style="max-width:100px;" placeholder="Unit">
             <button type="button" class="btn btn-sm btn-outline-coral remove-ingredient" title="Remove"><i class="bi bi-x-lg"></i></button>
         </div>`;
 
+    function updateRemoveButtons() {
+        const rows = container.querySelectorAll('.ingredient-row');
+        const onlyOne = rows.length === 1;
+        rows.forEach(row => {
+            const btn = row.querySelector('.remove-ingredient');
+            if (!btn) return;
+            btn.disabled = onlyOne;
+            btn.title = onlyOne ? 'At least one ingredient is required' : 'Remove';
+        });
+    }
+
     addBtn.addEventListener('click', () => {
         container.insertAdjacentHTML('beforeend', rowHtml);
+        updateRemoveButtons();
     });
 
     container.addEventListener('click', (e) => {
         const removeBtn = e.target.closest('.remove-ingredient');
-        if (removeBtn) {
-            const row = removeBtn.closest('.ingredient-row');
-            if (container.querySelectorAll('.ingredient-row').length > 1) {
-                row.remove();
-            } else {
-                row.querySelectorAll('input').forEach(inp => inp.value = '');
-            }
+        if (!removeBtn) return;
+        const rows = container.querySelectorAll('.ingredient-row');
+        if (rows.length > 1) {
+            removeBtn.closest('.ingredient-row').remove();
+            updateRemoveButtons();
         }
     });
+
+    updateRemoveButtons();
 })();
 </script>
 {% endblock %}

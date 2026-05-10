@@ -12,7 +12,12 @@
 
     if (!resultsContainer) return;
 
-    let currentPage = 1;
+    // Pick up initial pagination state from data attributes the server set,
+    // so deep links like /discover?page=3 don't make Load More re-fetch page 1.
+    const initialPage = parseInt(resultsContainer.dataset.currentPage, 10) || 1;
+    const perPage = parseInt(resultsContainer.dataset.perPage, 10) || 12;
+
+    let currentPage = initialPage;
     let currentQuery = '';
     let currentCategory = '';
     let currentSort = 'newest';
@@ -85,7 +90,7 @@
             category: currentCategory,
             sort: currentSort,
             page: currentPage,
-            per_page: 12
+            per_page: perPage
         });
 
         showSpinner(resultsContainer);

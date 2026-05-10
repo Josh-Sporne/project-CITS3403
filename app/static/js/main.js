@@ -61,6 +61,46 @@ function hideSpinner(container) {
     if (overlay) overlay.remove();
 }
 
+/* ── Toast helpers ──
+ * Shows a small floating message bottom-right that fades after ~2.5s.
+ * Use showToast(msg) for success/info (mint).
+ * Use showErrorToast(msg) for failures (coral).
+ */
+function _ensureToastContainer() {
+    let container = document.getElementById('pt-toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'pt-toast-container';
+        document.body.appendChild(container);
+    }
+    return container;
+}
+
+function showToast(message, variant) {
+    const container = _ensureToastContainer();
+    const toast = document.createElement('div');
+    toast.className = 'pt-toast pt-toast--' + (variant === 'error' ? 'error' : 'success');
+    toast.setAttribute('role', 'status');  // a11y: screen readers announce it
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    // Trigger CSS transition by adding .show on the next frame.
+    requestAnimationFrame(() => toast.classList.add('show'));
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 400);  // wait for fade-out before removing
+    }, 2500);
+}
+
+function showErrorToast(message) {
+    showToast(message, 'error');
+}
+
+// Expose globally so other scripts (planner.js, detail.html, etc.) can use them.
+window.showToast = showToast;
+window.showErrorToast = showErrorToast;
+
 document.addEventListener('DOMContentLoaded', () => {
     autoDismissAlerts();
 });
