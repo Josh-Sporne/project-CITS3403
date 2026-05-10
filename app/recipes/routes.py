@@ -216,6 +216,13 @@ def detail(slug):
     comments = recipe.comments.all()
     ingredients = recipe.ingredients.all()
 
+    # Build a 1..5 -> count distribution so the template can render bars.
+    # We use .all() because recipe.ratings is a query, not a list.
+    rating_distribution = {i: 0 for i in range(1, 6)}
+    for r in recipe.ratings.all():
+        if r.score in rating_distribution:
+            rating_distribution[r.score] += 1
+
     user_saved = False
     user_rating = 0
     if current_user.is_authenticated:
@@ -233,6 +240,7 @@ def detail(slug):
         recipe=recipe,
         avg_rating=avg_rating,
         rating_count=rating_count,
+        rating_distribution=rating_distribution,
         comments=comments,
         ingredients=ingredients,
         user_saved=user_saved,

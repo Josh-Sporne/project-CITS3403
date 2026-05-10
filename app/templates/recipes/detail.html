@@ -133,6 +133,22 @@
         <span class="badge bg-success">You rated {{ user_rating }}/5</span>
         {% endif %}
     </div>
+
+    {% if rating_count > 0 %}
+    <div class="rating-breakdown" aria-label="Rating distribution">
+        {% for score in [5, 4, 3, 2, 1] %}
+        {% set count = rating_distribution[score] %}
+        {% set pct = (count / rating_count * 100) if rating_count else 0 %}
+        <div class="rating-breakdown-row">
+            <span class="rating-breakdown-label">{{ score }} <i class="bi bi-star-fill" aria-hidden="true"></i></span>
+            <div class="rating-breakdown-bar">
+                <div class="rating-breakdown-fill" style="width: {{ pct }}%;"></div>
+            </div>
+            <span class="rating-breakdown-count">{{ count }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 </section>
 
 <!-- Comments Section -->
