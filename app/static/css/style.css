@@ -4005,3 +4005,10 @@ html {
   0%   { background: rgba(110, 231, 183, 0.35); }
   100% { background: transparent; }
 }
+
+/* ── G-MED-4: footer background follows the active theme ── */
+footer {
+  background: var(--pt-surface);
+  color: var(--pt-text);
+  border-top: 1px solid var(--pt-border);
+}
