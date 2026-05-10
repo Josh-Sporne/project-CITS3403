@@ -3,8 +3,10 @@ from wtforms import (
     StringField, PasswordField, BooleanField, TextAreaField, SubmitField,
 )
 from wtforms.validators import (
-    DataRequired, Email, EqualTo, Length, ValidationError,
+    DataRequired, Email, EqualTo, Length, ValidationError, Regexp
 )
+
+from sqlalchemy import func
 
 from app.models import User
 
@@ -12,7 +14,11 @@ from app.models import User
 class RegisterForm(FlaskForm):
     username = StringField(
         'Username',
-        validators=[DataRequired(), Length(min=3, max=80)],
+        validators=[
+            DataRequired(),
+            Length(min=3, max=80),
+            Regexp(r'^[A-Za-z0-9_\-]{3,80}$', message='Username can only contain letters, numbers, - and _')
+        ],
     )
     email = StringField(
         'Email',
@@ -29,11 +35,13 @@ class RegisterForm(FlaskForm):
     submit = SubmitField('Create Account')
 
     def validate_username(self, field):
-        if User.query.filter_by(username=field.data).first():
+        field.data = field.data.strip().lower()
+        if User.query.filter(func.lower(User.username) == field.data).first():
             raise ValidationError('Username already taken.')
 
     def validate_email(self, field):
-        if User.query.filter_by(email=field.data).first():
+        field.data = field.data.strip().lower()
+        if User.query.filter(func.lower(User.email) == field.data).first():
             raise ValidationError('Email already registered.')
 
 

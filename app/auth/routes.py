@@ -1,6 +1,8 @@
 from flask import flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 
+from sqlalchemy import func
+
 from app import db
 from app.auth import bp
 from app.auth.forms import EditProfileForm, LoginForm, RegisterForm
@@ -20,7 +22,7 @@ def register():
         db.session.commit()
         login_user(user)
         flash('Account created!', 'success')
-        return redirect('/')
+        return redirect(url_for('recipes.home'))
     return render_template('auth/register.html', form=form)
 
 
@@ -31,14 +33,19 @@ def login():
 
     form = LoginForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
+        user = User.query.filter(func.lower(User.username) == form.username.data.lower()).first()
         if user is None or not user.check_password(form.password.data):
             flash('Invalid username or password.', 'danger')
             return redirect(url_for('auth.login'))
         login_user(user, remember=form.remember_me.data)
         flash('Welcome back!', 'success')
-        next_page = request.args.get('next')
-        return redirect(next_page or '/')
+        from urllib.parse import urlparse
+        nxt = request.args.get('next')
+        if nxt:
+            parsed = urlparse(nxt)
+            if parsed.netloc or parsed.scheme:
+                nxt = None
+        return redirect(nxt or url_for('recipes.home'))
     return render_template('auth/login.html', form=form)
 
 
@@ -47,7 +54,7 @@ def login():
 def logout():
     logout_user()
     flash('Logged out.', 'info')
-    return redirect('/')
+    return redirect(url_for('recipes.home'))
 
 
 @bp.route('/profile')
@@ -108,7 +115,7 @@ def profile_edit():
 
 @bp.route('/user/<username>')
 def public_profile(username):
-    user = User.query.filter_by(username=username).first_or_404()
+    user = User.query.filter(func.lower(User.username) == username.lower()).first_or_404()
 
     recipes = (
         Recipe.query

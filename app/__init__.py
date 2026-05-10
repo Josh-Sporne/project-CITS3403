@@ -4,6 +4,17 @@ from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from config import Config
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+
+@event.listens_for(Engine, 'connect')
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    try:
+        cursor = dbapi_connection.cursor()
+        cursor.execute('PRAGMA foreign_keys=ON')
+        cursor.close()
+    except Exception:
+        pass
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -47,8 +58,20 @@ def create_app(config_class=Config):
     def not_found(e):
         return render_template('404.html'), 404
 
+    @app.errorhandler(413)
+    def file_too_large(e):
+        from flask import flash, redirect, request, url_for
+        flash('File too large — maximum size is 4 MB.', 'danger')
+        return redirect(request.referrer or url_for('recipes.create')), 413
+
     @app.errorhandler(500)
     def server_error(e):
         return render_template('500.html'), 500
+
+    @app.after_request
+    def set_security_headers(response):
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+        return response
 
     return app

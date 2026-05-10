@@ -1,5 +1,39 @@
 /* Plate Theory — Shared Utilities */
 
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.appendChild(document.createTextNode(s ?? ''));
+  return d.innerHTML;
+}
+window.escapeHtml = escapeHtml;
+
+function showErrorToast(message) {
+  const el = document.createElement('div');
+  el.className = 'alert alert-danger position-fixed bottom-0 end-0 m-3';
+  el.style.zIndex = 9999;
+  el.textContent = message;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+window.showErrorToast = showErrorToast;
+
+function toggleFollow(username, btn) {
+  const isFollowing = btn.dataset.following === 'true';
+  fetch(`/user/${username}/follow`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content }
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      btn.dataset.following = !isFollowing;
+      btn.textContent = isFollowing ? 'Follow' : 'Unfollow';
+    }
+  })
+  .catch(() => showErrorToast('Could not update follow status.'));
+}
+window.toggleFollow = toggleFollow;
+
 async function apiCall(url, method = 'GET', data = null) {
     const opts = {
         method,
