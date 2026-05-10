@@ -64,10 +64,26 @@ def discover():
         .all()
     )
 
+    # Build the category pill list from what's actually in the DB so any
+    # category that appears on a recipe card also has a matching filter pill.
+    # Use CATEGORY_CHOICES labels where available, otherwise title-case the
+    # raw value as a fallback (e.g. "indian" -> "Indian").
+    label_map = dict(CATEGORY_CHOICES)
+    db_categories = (
+        db.session.query(Recipe.category)
+        .filter(Recipe.is_public.is_(True), Recipe.is_deleted.is_(False), Recipe.category.isnot(None))
+        .distinct()
+        .all()
+    )
+    categories = sorted(
+        [(value, label_map.get(value, value.replace('-', ' ').title())) for (value,) in db_categories],
+        key=lambda pair: pair[1],
+    )
+
     return render_template(
         'recipes/discover.html',
         recipes=recipes,
-        categories=CATEGORY_CHOICES,
+        categories=categories,
         total=total,
         page=page,
         per_page=per_page,
