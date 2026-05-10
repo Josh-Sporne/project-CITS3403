@@ -13,10 +13,10 @@
     </div>
 
     <!-- Category Pills -->
-    <div class="discover-tags mb-3" id="category-tags">
-        <span class="tag active" data-category="">All</span>
+    <div class="discover-tags mb-3" id="category-tags" role="group" aria-label="Filter by category">
+        <button type="button" class="tag active" data-category="" aria-pressed="true">All</button>
         {% for value, label in categories %}
-        <span class="tag" data-category="{{ value }}">{{ label }}</span>
+        <button type="button" class="tag" data-category="{{ value }}" aria-pressed="false">{{ label }}</button>
         {% endfor %}
     </div>
 

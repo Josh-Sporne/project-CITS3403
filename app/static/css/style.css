@@ -4005,3 +4005,14 @@ html {
   0%   { background: rgba(110, 231, 183, 0.35); }
   100% { background: transparent; }
 }
+
+/* ── D4: neutralise browser default <button> styles for .tag pills ── */
+button.tag {
+  font-family: inherit;
+  line-height: 1.2;
+  cursor: pointer;
+}
+button.tag:focus-visible {
+  outline: 2px solid var(--pt-mint, #6ee7b7);
+  outline-offset: 2px;
+}

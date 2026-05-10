@@ -24,18 +24,25 @@
 
     /* ── Tag pills ── */
 
+    function setActiveTag(activePill) {
+        tagPills.forEach(t => {
+            const isActive = t === activePill;
+            t.classList.toggle('active', isActive);
+            t.setAttribute('aria-pressed', String(isActive));
+        });
+    }
+
     tagPills.forEach(pill => {
         pill.addEventListener('click', () => {
             const category = pill.dataset.category;
 
             if (pill.classList.contains('active') && category !== '') {
-                pill.classList.remove('active');
-                currentCategory = '';
+                // Deselecting the current category — fall back to "All".
                 const allPill = document.querySelector('#category-tags .tag[data-category=""]');
-                if (allPill) allPill.classList.add('active');
+                setActiveTag(allPill || pill);
+                currentCategory = '';
             } else {
-                tagPills.forEach(t => t.classList.remove('active'));
-                pill.classList.add('active');
+                setActiveTag(pill);
                 currentCategory = category || '';
             }
 
