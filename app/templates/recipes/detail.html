@@ -178,7 +178,8 @@
         {% for c in comments %}
         <div class="review">
             <strong><a href="{{ url_for('auth.public_profile', username=c.author.username) }}" class="text-decoration-none" style="color:var(--pt-text);">@{{ c.author.username }}</a></strong>
-            <span class="text-muted-custom small ms-2">{{ c.created_at.strftime('%b %d, %Y') if c.created_at else '' }}</span>
+            <span class="text-muted-custom small ms-2"
+                  data-timestamp="{{ c.created_at.isoformat() if c.created_at else '' }}">{{ c.created_at.strftime('%b %d, %Y') if c.created_at else '' }}</span>
             <p class="mb-0 mt-1">{{ c.body }}</p>
         </div>
         {% endfor %}
