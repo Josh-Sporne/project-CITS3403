@@ -11,6 +11,9 @@
         <button class="btn btn-sm btn-outline-light" id="printBtn">
             <i class="bi bi-printer"></i> Print
         </button>
+        <a class="btn btn-sm btn-outline-light" id="emailBtn" href="#">
+            <i class="bi bi-envelope"></i> Email
+        </a>
     </div>
 </div>
 
@@ -62,6 +65,7 @@
 
                 if (needed.length === 0) {
                     listEl.innerHTML = '<p class="text-muted-custom" style="font-size:.85rem">No ingredients needed — add meals to your planner first.</p>';
+                    document.getElementById('emailBtn').href = '#';
                 } else {
                     listEl.innerHTML = needed.map((item, i) => `
                         <div class="form-check mb-2 grocery-row">
@@ -72,6 +76,13 @@
                             </label>
                         </div>
                     `).join('');
+
+                    const subject = encodeURIComponent('My Grocery List — Plate Theory');
+                    const body = encodeURIComponent(
+                        'Grocery list for the week:\n\n' +
+                        needed.map(i => `- ${i.name}${i.quantity ? ' (' + i.quantity + (i.unit ? ' ' + i.unit : '') + ')' : ''}`).join('\n')
+                    );
+                    document.getElementById('emailBtn').href = `mailto:?subject=${subject}&body=${body}`;
                 }
 
                 if (excluded.length > 0) {
