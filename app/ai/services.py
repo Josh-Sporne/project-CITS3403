@@ -1,8 +1,6 @@
 import json
 
 from flask import current_app
-from sqlalchemy.orm import selectinload
-
 from app import db
 from app.models import Recipe, PantryItem
 from app.ai.recipe_defaults import (
@@ -27,7 +25,7 @@ def get_pantry_matches(user_id, max_time=None):
 
     query = Recipe.query.filter_by(
         is_public=True, is_deleted=False
-    ).options(selectinload(Recipe.ingredients))
+    )
 
     if max_time:
         query = query.filter(Recipe.cooking_time <= int(max_time))
