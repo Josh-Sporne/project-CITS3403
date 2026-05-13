@@ -54,9 +54,10 @@
             </button>
             {% endif %}
         {% endif %}
-        <a href="/planner" class="btn btn-sm btn-outline-light">
+        <button type="button" class="btn btn-sm btn-outline-light"
+                onclick="openAddToPlanModal({{ recipe.id }}, {{ recipe.title|tojson }})">
             <i class="bi bi-calendar-plus me-1"></i> Add to Meal Plan
-        </a>
+        </button>
     </div>
 </div>
 

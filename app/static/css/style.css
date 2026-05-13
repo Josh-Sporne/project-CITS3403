@@ -1591,6 +1591,10 @@ footer p {
     display: none !important;
   }
 
+  .grocery-list {
+    font-size: 14pt;
+  }
+
   .card,
   .pt-card,
   .panel,
