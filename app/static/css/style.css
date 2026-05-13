@@ -3750,7 +3750,7 @@ button.tag:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
-/* ── C11 + U5: bigger hero image on recipe detail (restored after merge) ── */
+/* ── C11 + U5: bigger hero image on recipe detail ── */
 .recipe-hero-img {
   display: block;
   width: 100%;
@@ -3769,7 +3769,7 @@ button.tag:focus-visible {
   .recipe-hero-img { height: 240px; }
 }
 
-/* ── C-V8: lightbox overlay (restored after merge) ── */
+/* ── C-V8: lightbox overlay ── */
 .pt-lightbox {
   position: fixed;
   inset: 0;
@@ -3812,15 +3812,13 @@ button.tag:focus-visible {
   justify-content: center;
   transition: background 0.15s ease;
 }
-.pt-lightbox-close:hover {
-  background: rgba(255, 255, 255, 0.28);
-}
+.pt-lightbox-close:hover { background: rgba(255, 255, 255, 0.28); }
 .pt-lightbox-close:focus-visible {
   outline: 2px solid var(--pt-mint, #6ee7b7);
   outline-offset: 2px;
 }
 
-/* Vertically center bi-* icons with their nav-link label text. */
+/* Vertically center bi-* icons with nav-link label text */
 .navbar-nav .nav-link {
   display: inline-flex;
   align-items: center;
@@ -3828,4 +3826,183 @@ button.tag:focus-visible {
 }
 .navbar-nav .nav-link > i {
   line-height: 1;
+}
+
+/* ============================================================
+   POLISH SYSTEM — Motion, Interactions, Visual Refinement
+   ============================================================ */
+
+/* ── 1. Scroll Reveal ── */
+.reveal {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: calc(var(--reveal-index, 0) * 55ms);
+}
+.reveal.visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+}
+
+/* ── 2. Card Image Zoom on Hover ── */
+.pt-card {
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1),
+              border-color 0.25s ease,
+              box-shadow 0.25s ease;
+}
+.pt-card > img {
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+.pt-card:hover > img {
+  transform: scale(1.06);
+}
+.pt-card:hover h3 a,
+.pt-card:hover h3 {
+  color: var(--pt-mint) !important;
+  transition: color 0.15s ease;
+}
+
+/* ── 3. Button Press Feedback ── */
+.btn {
+  transition: transform 0.1s ease, box-shadow 0.18s ease,
+              background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.btn-mint:hover {
+  box-shadow: 0 0 18px var(--pt-glow-mint);
+}
+.btn-outline-mint:hover {
+  box-shadow: 0 0 14px var(--pt-glow-mint);
+}
+
+/* ── 4. Scroll-aware Navbar ── */
+.navbar {
+  transition: background-color 0.3s ease, box-shadow 0.3s ease,
+              border-color 0.3s ease;
+}
+.navbar.scrolled {
+  background-color: rgba(28, 26, 40, 0.82) !important;
+  backdrop-filter: blur(18px) saturate(1.4);
+  -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  box-shadow: 0 1px 32px rgba(0, 0, 0, 0.35);
+  border-bottom-color: var(--pt-border-light) !important;
+}
+[data-theme="light"] .navbar.scrolled {
+  background-color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* ── 5. Gradient Text ── */
+.gradient-text {
+  background: linear-gradient(135deg, var(--pt-mint) 0%, var(--pt-violet) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── 6. Top Progress Bar ── */
+#pt-progress {
+  position: fixed;
+  top: 0; left: 0;
+  height: 2px;
+  width: 0%;
+  background: linear-gradient(90deg, var(--pt-mint), var(--pt-violet));
+  z-index: 9999;
+  transition: width 0.25s ease;
+  pointer-events: none;
+  opacity: 1;
+}
+#pt-progress.pt-progress-done {
+  opacity: 0;
+  transition: opacity 0.5s ease 0.1s;
+}
+
+/* ── 7. Toast Countdown ── */
+.pt-toast {
+  position: relative;
+  overflow: hidden;
+}
+.pt-toast::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  height: 2px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.3);
+  animation: toast-countdown 2.5s linear forwards;
+}
+@keyframes toast-countdown {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+
+/* ── 8. Chip Pop Animation ── */
+@keyframes chip-pop {
+  0%   { transform: scale(0.55); opacity: 0; }
+  70%  { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}
+.chip-enter {
+  animation: chip-pop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* ── 9. Pantry Match Bar Animate-In ── */
+.match-fill {
+  width: 0 !important;
+  transition: width 0.65s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+.match-fill.expanded {
+  /* width is set inline via JS, transition handles the rest */
+}
+
+/* ── 10. Grocery Strikethrough ── */
+.grocery-row.checked .form-check-label {
+  color: var(--pt-muted);
+  transition: color 0.2s ease;
+}
+.grocery-row.checked .grocery-name {
+  position: relative;
+}
+.grocery-row.checked .grocery-name::after {
+  content: '';
+  position: absolute;
+  left: 0; top: 50%;
+  height: 1px;
+  background: var(--pt-muted);
+  animation: strikethrough 0.25s ease forwards;
+}
+@keyframes strikethrough {
+  from { width: 0; }
+  to   { width: 100%; }
+}
+
+/* ── 11. Planner Slot Fill Animation ── */
+@keyframes slot-pop {
+  0%   { opacity: 0; transform: scale(0.9) translateY(4px); }
+  100% { opacity: 1; transform: none; }
+}
+.slot-content {
+  animation: slot-pop 0.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ── 12. Section Heading Accent ── */
+h2.accented, h3.accented {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+h2.accented::before, h3.accented::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 0.9em;
+  background: linear-gradient(180deg, var(--pt-mint), var(--pt-violet));
+  border-radius: 999px;
+  flex-shrink: 0;
 }
