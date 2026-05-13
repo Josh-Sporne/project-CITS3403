@@ -1,0 +1,3 @@
+{
+  "tests/unit/test_workc_routes.py::WorkCRoutesTestCase::test_discover_categories_omit_categories_with_no_public_recipes": true
+}

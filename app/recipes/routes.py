@@ -65,10 +65,26 @@ def discover():
         .all()
     )
 
+    # Build the category pill list from what's actually in the DB so any
+    # category that appears on a recipe card also has a matching filter pill.
+    # Use CATEGORY_CHOICES labels where available, otherwise title-case the
+    # raw value as a fallback (e.g. "indian" -> "Indian").
+    label_map = dict(CATEGORY_CHOICES)
+    db_categories = (
+        db.session.query(Recipe.category)
+        .filter(Recipe.is_public.is_(True), Recipe.is_deleted.is_(False), Recipe.category.isnot(None))
+        .distinct()
+        .all()
+    )
+    categories = sorted(
+        [(value, label_map.get(value, value.replace('-', ' ').title())) for (value,) in db_categories],
+        key=lambda pair: pair[1],
+    )
+
     return render_template(
         'recipes/discover.html',
         recipes=recipes,
-        categories=CATEGORY_CHOICES,
+        categories=categories,
         total=total,
         page=page,
         per_page=per_page,
@@ -204,6 +220,13 @@ def detail(slug):
     comments = recipe.comments.all()
     ingredients = recipe.ingredients.all()
 
+    # Build a 1..5 -> count distribution so the template can render bars.
+    # We use .all() because recipe.ratings is a query, not a list.
+    rating_distribution = {i: 0 for i in range(1, 6)}
+    for r in recipe.ratings.all():
+        if r.score in rating_distribution:
+            rating_distribution[r.score] += 1
+
     user_saved = False
     user_rating = 0
     if current_user.is_authenticated:
@@ -221,6 +244,7 @@ def detail(slug):
         recipe=recipe,
         avg_rating=avg_rating,
         rating_count=rating_count,
+        rating_distribution=rating_distribution,
         comments=comments,
         ingredients=ingredients,
         user_saved=user_saved,
