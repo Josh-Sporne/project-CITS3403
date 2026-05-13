@@ -73,6 +73,9 @@
             payload.custom_text = customText;
         }
 
+        const weekStart = document.getElementById('plannerWeekStart')?.value;
+        if (weekStart) payload.week_start = weekStart;
+
         fetch('/api/planner/save', {
             method: 'POST',
             headers: {
@@ -130,7 +133,10 @@
         if (!el) return;
         el.innerHTML = '<p class="text-muted-custom" style="font-size:.82rem">Loading…</p>';
 
-        fetch('/api/grocery-list?range=' + currentRange, {
+        const weekStartVal = document.getElementById('plannerWeekStart')?.value;
+        const groceryUrl = '/api/grocery-list?range=' + currentRange +
+            (weekStartVal ? '&week_start=' + encodeURIComponent(weekStartVal) : '');
+        fetch(groceryUrl, {
             headers: { 'X-CSRFToken': CSRF },
         })
             .then(r => r.json())
