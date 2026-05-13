@@ -3,30 +3,29 @@
 {% block title %}{{ recipe.title }} — Plate Theory{% endblock %}
 
 {% block content %}
+{% set hero_src = url_for('static', filename='uploads/' + recipe.image_filename) if recipe.image_filename
+                  else 'https://loremflickr.com/1200/800/' ~ recipe.slug|replace('-', ',') ~ ',food?lock=' ~ recipe.id %}
+
 <!-- Hero Image -->
-<div class="recipe-hero mb-4" {% if not recipe.image_filename %}data-emoji="🍜"{% endif %}>
-    {% if recipe.image_filename %}
+<div class="recipe-hero mb-4">
     <img id="recipe-hero-img"
          class="recipe-hero-img"
-         src="{{ url_for('static', filename='uploads/' + recipe.image_filename) }}"
+         src="{{ hero_src }}"
          alt="{{ recipe.title }}"
          tabindex="0"
          role="button"
          aria-label="Open larger view of {{ recipe.title }}">
-    {% endif %}
 </div>
 
-{% if recipe.image_filename %}
 <!-- Lightbox overlay (C11+U5+C-V8) — hidden by default, shown on hero click -->
 <div id="recipe-lightbox" class="pt-lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Recipe image full view">
     <button type="button" id="recipe-lightbox-close" class="pt-lightbox-close" aria-label="Close">
         <i class="bi bi-x-lg"></i>
     </button>
     <img class="pt-lightbox-img"
-         src="{{ url_for('static', filename='uploads/' + recipe.image_filename) }}"
+         src="{{ hero_src }}"
          alt="{{ recipe.title }}">
 </div>
-{% endif %}
 
 <!-- Title & Meta -->
 <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">

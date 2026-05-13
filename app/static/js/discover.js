@@ -164,9 +164,15 @@
     /* ── Card HTML builder ── */
 
     function buildRecipeCard(r) {
-        const imgBlock = r.image_filename
-            ? `<img src="/static/uploads/${escapeHtml(r.image_filename)}" alt="${escapeHtml(r.title)}" style="width:100%;height:160px;object-fit:cover;border-radius:12px;margin-bottom:0.65rem;">`
-            : '';
+        // Same image-fallback pattern as the server-rendered partial:
+        // real upload if present, otherwise a deterministic Loremflickr food photo.
+        // Use the recipe slug as comma-separated keywords (e.g. "kimchi-fried-rice"
+        // → "kimchi,fried,rice") so Loremflickr returns more relevant food photos.
+        const slugTags = (r.slug || '').replace(/-/g, ',');
+        const imgSrc = r.image_filename
+            ? `/static/uploads/${escapeHtml(r.image_filename)}`
+            : `https://loremflickr.com/600/400/${slugTags},food?lock=${r.id}`;
+        const imgBlock = `<img src="${imgSrc}" alt="${escapeHtml(r.title)}" style="width:100%;height:160px;object-fit:cover;border-radius:12px;margin-bottom:0.65rem;">`;
 
         const stars = Array.from({ length: 5 }, (_, i) =>
             `<i class="bi bi-star${i < Math.round(r.avg_rating || 0) ? '-fill' : ''}"></i>`

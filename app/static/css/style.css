@@ -3749,3 +3749,73 @@ button.tag:focus-visible {
   color: var(--pt-muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* ── C11 + U5: bigger hero image on recipe detail (restored after merge) ── */
+.recipe-hero-img {
+  display: block;
+  width: 100%;
+  height: 400px;
+  object-fit: cover;
+  border-radius: 14px;
+  cursor: zoom-in;
+  transition: transform 0.2s ease;
+}
+.recipe-hero-img:hover { transform: scale(1.01); }
+.recipe-hero-img:focus-visible {
+  outline: 2px solid var(--pt-mint, #6ee7b7);
+  outline-offset: 3px;
+}
+@media (max-width: 768px) {
+  .recipe-hero-img { height: 240px; }
+}
+
+/* ── C-V8: lightbox overlay (restored after merge) ── */
+.pt-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(8, 10, 14, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1090;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  padding: 2rem;
+}
+.pt-lightbox.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+.pt-lightbox-img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.pt-lightbox-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+.pt-lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+.pt-lightbox-close:focus-visible {
+  outline: 2px solid var(--pt-mint, #6ee7b7);
+  outline-offset: 2px;
+}
