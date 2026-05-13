@@ -106,14 +106,14 @@
             per_page: perPage
         });
 
-        showSpinner(resultsContainer);
+        // Skeleton placeholders only on a fresh fetch (not when appending more
+        // results via Load More — those shouldn't blank out what's already there).
+        if (!append) showSkeletons(resultsContainer, perPage);
 
         try {
             const data = await apiCall(`/api/recipes?${params}`);
 
-            hideSpinner(resultsContainer);
-
-            if (!append) resultsContainer.innerHTML = '';
+            if (!append) resultsContainer.innerHTML = '';  // clears skeletons
 
             if (data.recipes.length === 0 && !append) {
                 resultsContainer.innerHTML = '<div class="col-12"><p class="text-muted-custom text-center">No recipes found.</p></div>';
@@ -138,10 +138,26 @@
                 bindLoadMore();
             }
         } catch (err) {
-            hideSpinner(resultsContainer);
             if (!append) {
                 resultsContainer.innerHTML = '<div class="col-12"><p class="text-coral text-center">Could not load recipes. Please try again.</p></div>';
             }
+        }
+    }
+
+    /* ── Skeleton placeholder cards ── */
+    function showSkeletons(grid, count) {
+        grid.innerHTML = '';  // wipe whatever was there
+        for (let i = 0; i < count; i++) {
+            const col = document.createElement('div');
+            col.className = 'col-lg-3 col-md-4 col-sm-6';
+            col.innerHTML = `
+                <div class="pt-card h-100" aria-hidden="true">
+                    <div class="skeleton" style="height:160px;border-radius:12px;margin-bottom:0.65rem;"></div>
+                    <div class="skeleton" style="height:1.2rem;width:75%;margin-bottom:0.4rem;"></div>
+                    <div class="skeleton" style="height:0.9rem;width:50%;margin-bottom:0.4rem;"></div>
+                    <div class="skeleton" style="height:0.9rem;width:35%;"></div>
+                </div>`;
+            grid.appendChild(col);
         }
     }
 

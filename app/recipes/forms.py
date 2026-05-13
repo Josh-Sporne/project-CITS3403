@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
-from wtforms import StringField, TextAreaField, IntegerField, SelectField
+from wtforms import StringField, TextAreaField, IntegerField, SelectField, BooleanField
 from wtforms.validators import DataRequired, Length, NumberRange, Optional
 
 CATEGORY_CHOICES = [
@@ -32,4 +32,8 @@ class RecipeForm(FlaskForm):
     image = FileField(
         'Recipe Image',
         validators=[FileAllowed(['jpg', 'jpeg', 'png', 'gif', 'webp'])],
+    )
+    is_public = BooleanField(
+        'Make this recipe public (visible to everyone on Discover)',
+        default=True,
     )

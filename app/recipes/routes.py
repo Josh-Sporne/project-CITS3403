@@ -168,6 +168,7 @@ def create():
             category=form.category.data,
             instructions=form.instructions.data,
             creator_id=current_user.id,
+            is_public=form.is_public.data,
         )
         recipe.generate_slug()
 
@@ -277,6 +278,7 @@ def edit(slug):
         recipe.cooking_time = form.cooking_time.data or 30
         recipe.category = form.category.data
         recipe.instructions = form.instructions.data
+        recipe.is_public = form.is_public.data
 
         if form.image.data:
             if recipe.image_filename:

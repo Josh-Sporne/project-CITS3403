@@ -6,9 +6,27 @@
 <!-- Hero Image -->
 <div class="recipe-hero mb-4" {% if not recipe.image_filename %}data-emoji="🍜"{% endif %}>
     {% if recipe.image_filename %}
-    <img src="{{ url_for('static', filename='uploads/' + recipe.image_filename) }}" alt="{{ recipe.title }}">
+    <img id="recipe-hero-img"
+         class="recipe-hero-img"
+         src="{{ url_for('static', filename='uploads/' + recipe.image_filename) }}"
+         alt="{{ recipe.title }}"
+         tabindex="0"
+         role="button"
+         aria-label="Open larger view of {{ recipe.title }}">
     {% endif %}
 </div>
+
+{% if recipe.image_filename %}
+<!-- Lightbox overlay (C11+U5+C-V8) — hidden by default, shown on hero click -->
+<div id="recipe-lightbox" class="pt-lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Recipe image full view">
+    <button type="button" id="recipe-lightbox-close" class="pt-lightbox-close" aria-label="Close">
+        <i class="bi bi-x-lg"></i>
+    </button>
+    <img class="pt-lightbox-img"
+         src="{{ url_for('static', filename='uploads/' + recipe.image_filename) }}"
+         alt="{{ recipe.title }}">
+</div>
+{% endif %}
 
 <!-- Title & Meta -->
 <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
@@ -415,6 +433,48 @@
                 }, 1800);
             } catch (err) {
                 window.prompt('Copy this link:', url);
+            }
+        });
+    }
+
+    /* Lightbox — click hero image to view at full size (C11+U5+C-V8) */
+    const heroImg = document.getElementById('recipe-hero-img');
+    const lightbox = document.getElementById('recipe-lightbox');
+    const lightboxClose = document.getElementById('recipe-lightbox-close');
+
+    if (heroImg && lightbox) {
+        function openLightbox() {
+            lightbox.classList.add('show');
+            lightbox.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';   // prevent background scroll
+            lightboxClose.focus();                      // a11y: move focus into the modal
+        }
+        function closeLightbox() {
+            lightbox.classList.remove('show');
+            lightbox.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+            heroImg.focus();                            // return focus to the trigger
+        }
+
+        heroImg.addEventListener('click', openLightbox);
+        heroImg.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openLightbox();
+            }
+        });
+
+        lightboxClose.addEventListener('click', closeLightbox);
+
+        // Click anywhere on the dim backdrop (but NOT on the image itself).
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) closeLightbox();
+        });
+
+        // Esc key closes the lightbox while it's open.
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && lightbox.classList.contains('show')) {
+                closeLightbox();
             }
         });
     }
