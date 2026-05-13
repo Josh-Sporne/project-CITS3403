@@ -70,6 +70,7 @@ class Recipe(db.Model):
     creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
     is_public = db.Column(db.Boolean, default=True)
     is_deleted = db.Column(db.Boolean, default=False)
+    is_ai_generated = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
     updated_at = db.Column(
         db.DateTime,
@@ -87,6 +88,12 @@ class Recipe(db.Model):
         order_by='Comment.created_at.desc()',
     )
     saved_by = db.relationship('SavedRecipe', backref='recipe', lazy='dynamic')
+    tags = db.relationship(
+        'Tag',
+        secondary='recipe_tag',
+        backref=db.backref('recipes', lazy='dynamic'),
+        lazy='subquery',
+    )
 
     def generate_slug(self):
         base = slugify(self.title)
@@ -213,4 +220,39 @@ class Follower(db.Model):
 
     __table_args__ = (
         db.UniqueConstraint('follower_id', 'followed_id', name='uq_follower_followed'),
+    )
+
+
+class Tag(db.Model):
+    """A reusable tag/label that can be attached to many recipes (C14)."""
+    __tablename__ = 'tag'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def __repr__(self):
+        return f'<Tag {self.name}>'
+
+
+class RecipeTag(db.Model):
+    """Association table linking recipes to tags (many-to-many)."""
+    __tablename__ = 'recipe_tag'
+
+    id = db.Column(db.Integer, primary_key=True)
+    recipe_id = db.Column(
+        db.Integer,
+        db.ForeignKey('recipe.id', ondelete='CASCADE'),
+        nullable=False,
+        index=True,
+    )
+    tag_id = db.Column(
+        db.Integer,
+        db.ForeignKey('tag.id', ondelete='CASCADE'),
+        nullable=False,
+        index=True,
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint('recipe_id', 'tag_id', name='uq_recipe_tag'),
     )
