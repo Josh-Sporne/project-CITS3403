@@ -1,12 +1,13 @@
 from datetime import datetime, timezone, timedelta
 
-from flask import render_template, request, jsonify, current_app
+from flask import render_template, jsonify, current_app
 from flask_login import login_required, current_user
 
 from app import db
 from app.models import PantryItem
 from app.ai import bp
 from app.ai.services import get_pantry_matches, get_ai_suggestions
+from app.utils import json_body
 
 
 @bp.route('/pantry')
@@ -29,7 +30,7 @@ def ai_suggest():
                 error=f'Rate limited — please wait {wait}s'
             ), 429
 
-    data = request.get_json(silent=True) or {}
+    data = json_body()
     ingredients = data.get('ingredients', [])
     if not isinstance(ingredients, list):
         return jsonify(success=False, error='ingredients must be a list'), 400
