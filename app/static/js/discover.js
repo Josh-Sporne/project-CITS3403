@@ -17,25 +17,38 @@
     const initialPage = parseInt(resultsContainer.dataset.currentPage, 10) || 1;
     const perPage = parseInt(resultsContainer.dataset.perPage, 10) || 12;
 
+    // Pick up initial filter state from the URL so deep links like
+    // /discover?category=vegan or /discover?q=pasta apply on page load.
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialCategory = (urlParams.get('category') || '').toLowerCase();
+    const initialQuery = urlParams.get('q') || '';
+
     let currentPage = initialPage;
-    let currentQuery = '';
-    let currentCategory = '';
+    let currentQuery = initialQuery;
+    let currentCategory = initialCategory;
     let currentSort = 'newest';
 
     /* ── Tag pills ── */
+
+    function setActiveTag(activePill) {
+        tagPills.forEach(t => {
+            const isActive = t === activePill;
+            t.classList.toggle('active', isActive);
+            t.setAttribute('aria-pressed', String(isActive));
+        });
+    }
 
     tagPills.forEach(pill => {
         pill.addEventListener('click', () => {
             const category = pill.dataset.category;
 
             if (pill.classList.contains('active') && category !== '') {
-                pill.classList.remove('active');
-                currentCategory = '';
+                // Deselecting the current category — fall back to "All".
                 const allPill = document.querySelector('#category-tags .tag[data-category=""]');
-                if (allPill) allPill.classList.add('active');
+                setActiveTag(allPill || pill);
+                currentCategory = '';
             } else {
-                tagPills.forEach(t => t.classList.remove('active'));
-                pill.classList.add('active');
+                setActiveTag(pill);
                 currentCategory = category || '';
             }
 
@@ -174,5 +187,22 @@
         const div = document.createElement('div');
         div.appendChild(document.createTextNode(str));
         return div.innerHTML;
+    }
+
+    /* ── Initial sync: apply ?category and ?q from URL on page load ── */
+    if (initialCategory || initialQuery) {
+        if (searchInput && initialQuery) {
+            searchInput.value = initialQuery;
+        }
+        if (initialCategory) {
+            tagPills.forEach(t => {
+                const isMatch = t.dataset.category.toLowerCase() === initialCategory;
+                t.classList.toggle('active', isMatch);
+                t.setAttribute('aria-pressed', String(isMatch));
+            });
+        }
+        // Re-fetch from page 1 with the URL-derived filters applied.
+        currentPage = 1;
+        fetchRecipes(false);
     }
 })();
