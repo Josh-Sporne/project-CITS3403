@@ -135,12 +135,19 @@
             if (data.recipes.length === 0 && !append) {
                 resultsContainer.innerHTML = '<div class="col-12"><p class="text-muted-custom text-center">No recipes found.</p></div>';
             } else {
+                const newCols = [];
                 data.recipes.forEach(recipe => {
                     const col = document.createElement('div');
                     col.className = 'col-lg-3 col-md-4 col-sm-6';
                     col.innerHTML = buildRecipeCard(recipe);
                     resultsContainer.appendChild(col);
+                    const card = col.querySelector('.pt-card');
+                    if (card) newCols.push(card);
                 });
+                // Register new cards with the scroll reveal observer
+                if (newCols.length && window.revealElements) {
+                    window.revealElements(newCols);
+                }
             }
 
             const shown = resultsContainer.querySelectorAll('.pt-card').length;
