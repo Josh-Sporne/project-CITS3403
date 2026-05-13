@@ -4006,3 +4006,94 @@ h2.accented::before, h3.accented::before {
   border-radius: 999px;
   flex-shrink: 0;
 }
+
+/* ─────────────────────────────────────────────
+   NAVBAR BLUR — sticky header fix
+   header is now sticky so scrolled class works
+───────────────────────────────────────────── */
+header {
+  position: sticky;
+  top: 0;
+  z-index: 1050;
+}
+.navbar.scrolled {
+  background-color: rgba(22, 20, 34, 0.78) !important;
+  backdrop-filter: blur(20px) saturate(1.5) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.5) !important;
+  border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+  box-shadow: 0 2px 40px rgba(0,0,0,0.4) !important;
+}
+[data-theme="light"] .navbar.scrolled {
+  background-color: rgba(255,255,255,0.82) !important;
+}
+
+/* ─────────────────────────────────────────────
+   ANIMATED GRADIENT HERO
+───────────────────────────────────────────── */
+.hero-gradient-bg {
+  position: relative;
+  overflow: hidden;
+}
+.hero-gradient-bg::before {
+  content: '';
+  position: absolute;
+  inset: -60%;
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    var(--pt-mint)   0deg,
+    var(--pt-violet) 120deg,
+    var(--pt-coral)  240deg,
+    var(--pt-mint)   360deg
+  );
+  opacity: 0.07;
+  border-radius: 50%;
+  animation: hero-spin 18s linear infinite;
+  pointer-events: none;
+  will-change: transform;
+}
+@keyframes hero-spin {
+  to { transform: rotate(360deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-gradient-bg::before { animation: none; }
+}
+
+/* ─────────────────────────────────────────────
+   WORD-BY-WORD REVEAL
+───────────────────────────────────────────── */
+.word-reveal-wrap {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  padding-bottom: 0.05em;
+}
+.word-reveal-inner {
+  display: inline-block;
+  transform: translateY(110%);
+  opacity: 0;
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity   0.6s ease;
+  transition-delay: calc(var(--wi, 0) * 80ms + 120ms);
+}
+.words-ready .word-reveal-inner {
+  transform: none;
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .word-reveal-inner { transform: none; opacity: 1; transition: none; }
+}
+
+/* ─────────────────────────────────────────────
+   MAGNETIC BUTTON — smooth return transition
+   (mousemove sets inline transform; mouseleave
+   clears it so CSS transition takes over)
+───────────────────────────────────────────── */
+.btn-mint,
+.btn-outline-mint,
+.btn-coral {
+  transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.2s ease,
+              background-color 0.2s ease,
+              border-color 0.2s ease,
+              color 0.2s ease !important;
+}

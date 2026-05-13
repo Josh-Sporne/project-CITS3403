@@ -135,68 +135,88 @@ function showErrorToast(message) {
 window.showToast = showToast;
 window.showErrorToast = showErrorToast;
 
-/* ── Scroll Reveal ── */
-function initScrollReveal() {
+/* ─────────────────────────────────────────────
+   SCROLL REVEAL
+   - Only animates elements NOT already in viewport
+   - Exposes window.revealElements(nodeList) so
+     dynamically added cards (Load More, planner)
+     can be registered after the fact
+───────────────────────────────────────────── */
+const _revealObserver = (() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return { observe: () => {} };
+    }
+    return new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            const el = entry.target;
+            el.classList.add('visible');
+            _revealObserver.unobserve(el);
+        });
+    }, { threshold: 0.07, rootMargin: '0px 0px -32px 0px' });
+})();
+
+function revealElements(nodeList) {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const viewport = window.innerHeight;
 
-    const targets = document.querySelectorAll(
-        '.pt-card, .card, .pt-panel, section, .reveal, .animate-fade'
-    );
-
-    // Group siblings so stagger index resets per parent container
+    // Group by parent to stagger siblings independently
     const parentMap = new Map();
-    targets.forEach(el => {
-        const key = el.parentElement;
+    Array.from(nodeList).forEach(el => {
+        const key = el.parentElement || document.body;
         if (!parentMap.has(key)) parentMap.set(key, []);
         parentMap.get(key).push(el);
     });
+
     parentMap.forEach(group => {
-        group.forEach((el, i) => {
-            el.style.setProperty('--reveal-index', i);
-        });
-    });
-
-    targets.forEach(el => el.classList.add('reveal'));
-
-    const observer = new IntersectionObserver((entries) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
-                observer.unobserve(entry.target);
+        let staggerIdx = 0;
+        group.forEach(el => {
+            const rect = el.getBoundingClientRect();
+            if (rect.top < viewport - 20) {
+                // Already visible on load — show instantly, no animation
+                el.classList.add('reveal', 'visible');
+            } else {
+                el.classList.add('reveal');
+                el.style.setProperty('--reveal-index', staggerIdx++);
+                _revealObserver.observe(el);
             }
         });
-    }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+    });
+}
+window.revealElements = revealElements;
 
-    targets.forEach(el => observer.observe(el));
+function initScrollReveal() {
+    revealElements(document.querySelectorAll(
+        '.pt-card, .card:not(.navbar *), .pt-panel, .animate-fade'
+    ));
 }
 
-/* ── Scroll-aware Navbar ── */
+/* ─────────────────────────────────────────────
+   SCROLL-AWARE NAVBAR BLUR
+───────────────────────────────────────────── */
 function initNavbarScroll() {
     const navbar = document.querySelector('.navbar');
     if (!navbar) return;
-    const onScroll = () => {
-        navbar.classList.toggle('scrolled', window.scrollY > 48);
-    };
+    const onScroll = () => navbar.classList.toggle('scrolled', window.scrollY > 40);
     window.addEventListener('scroll', onScroll, { passive: true });
     onScroll();
 }
 
-/* ── Top Progress Bar ── */
+/* ─────────────────────────────────────────────
+   TOP PAGE LOAD PROGRESS BAR
+───────────────────────────────────────────── */
 (function initProgressBar() {
     const bar = document.createElement('div');
     bar.id = 'pt-progress';
     document.body.prepend(bar);
-
-    let width = 0;
-    let raf;
+    let raf, width = 0;
 
     function tick() {
-        width = Math.min(width + (100 - width) * 0.08, 92);
+        width = Math.min(width + (100 - width) * 0.07, 90);
         bar.style.width = width + '%';
         raf = requestAnimationFrame(tick);
     }
 
-    // Start on page unload (navigation)
     document.addEventListener('click', e => {
         const a = e.target.closest('a[href]');
         if (!a) return;
@@ -204,20 +224,74 @@ function initNavbarScroll() {
         if (!href || href.startsWith('#') || href.startsWith('mailto') ||
             href.startsWith('javascript') || a.target === '_blank') return;
         width = 15;
+        bar.style.opacity = '1';
         bar.style.width = '15%';
         bar.classList.remove('pt-progress-done');
+        cancelAnimationFrame(raf);
         raf = requestAnimationFrame(tick);
     });
 
-    // Complete on DOMContentLoaded
     window.addEventListener('DOMContentLoaded', () => {
         cancelAnimationFrame(raf);
         bar.style.width = '100%';
-        setTimeout(() => bar.classList.add('pt-progress-done'), 200);
+        setTimeout(() => { bar.classList.add('pt-progress-done'); }, 180);
     });
 })();
 
-/* ── Grocery strikethrough via class toggle ── */
+/* ─────────────────────────────────────────────
+   MAGNETIC BUTTON EFFECT — desktop only
+───────────────────────────────────────────── */
+function initMagneticButtons() {
+    if (!window.matchMedia('(pointer: fine)').matches) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    function attachMagnetic(el) {
+        el.addEventListener('mousemove', e => {
+            const rect = el.getBoundingClientRect();
+            const cx = rect.left + rect.width / 2;
+            const cy = rect.top  + rect.height / 2;
+            const dx = (e.clientX - cx) * 0.28;
+            const dy = (e.clientY - cy) * 0.28;
+            el.style.transform = `translate(${dx}px, ${dy}px) scale(1.04)`;
+        });
+        el.addEventListener('mouseleave', () => {
+            el.style.transform = '';
+        });
+    }
+
+    // Attach to primary action buttons — not every btn
+    document.querySelectorAll('.btn-mint, .btn-outline-mint, .btn-coral').forEach(attachMagnetic);
+
+    // Re-attach when new buttons appear (e.g. pantry results)
+    const mo = new MutationObserver(muts => {
+        muts.forEach(m => m.addedNodes.forEach(n => {
+            if (n.nodeType !== 1) return;
+            if (n.matches?.('.btn-mint, .btn-outline-mint, .btn-coral')) attachMagnetic(n);
+            n.querySelectorAll?.('.btn-mint, .btn-outline-mint, .btn-coral').forEach(attachMagnetic);
+        }));
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+}
+
+/* ─────────────────────────────────────────────
+   HERO WORD-BY-WORD REVEAL
+   Splits text into word spans with stagger
+───────────────────────────────────────────── */
+function initHeroReveal() {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    document.querySelectorAll('[data-word-reveal]').forEach(el => {
+        const words = el.textContent.trim().split(/\s+/);
+        el.innerHTML = words.map((w, i) =>
+            `<span class="word-reveal-wrap"><span class="word-reveal-inner" style="--wi:${i}">${w}</span></span>`
+        ).join(' ');
+        el.classList.add('words-ready');
+    });
+}
+
+/* ─────────────────────────────────────────────
+   GROCERY STRIKETHROUGH
+───────────────────────────────────────────── */
 function initGroceryCheck() {
     document.addEventListener('change', e => {
         if (e.target.type !== 'checkbox') return;
@@ -230,5 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
     autoDismissAlerts();
     initScrollReveal();
     initNavbarScroll();
+    initMagneticButtons();
+    initHeroReveal();
     initGroceryCheck();
 });
