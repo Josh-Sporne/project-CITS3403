@@ -47,6 +47,13 @@
                 <i class="bi bi-clock me-1"></i>{{ recipe.cooking_time or 30 }} min
             </span>
             <span class="badge bg-info">{{ recipe.category|capitalize }}</span>
+            {% if recipe.tags %}
+            <span class="d-inline-flex flex-wrap gap-1">
+                {% for tag in recipe.tags %}
+                <span class="badge bg-secondary">#{{ tag.name }}</span>
+                {% endfor %}
+            </span>
+            {% endif %}
             {% if recipe.creator %}
             <span class="text-muted-custom small">
                 <i class="bi bi-journal-text"></i> {{ recipe.creator.recipes.count() }} recipes
