@@ -1,0 +1,13 @@
+[
+  "tests/unit/test_workc_routes.py::WorkCRoutesTestCase::test_create_recipe_is_public_checked_makes_public",
+  "tests/unit/test_workc_routes.py::WorkCRoutesTestCase::test_create_recipe_is_public_unchecked_makes_private",
+  "tests/unit/test_workc_routes.py::WorkCRoutesTestCase::test_discover_categories_omit_categories_with_no_public_recipes",
+  "tests/unit/test_workc_routes.py::WorkCRoutesTestCase::test_discover_categories_reflect_db_and_are_sorted",
+  "tests/unit/test_workc_routes.py::WorkCRoutesTestCase::test_discover_default_page_returns_first_12",
+  "tests/unit/test_workc_routes.py::WorkCRoutesTestCase::test_discover_excludes_private_and_deleted",
+  "tests/unit/test_workc_routes.py::WorkCRoutesTestCase::test_discover_negative_page_clamps_to_one",
+  "tests/unit/test_workc_routes.py::WorkCRoutesTestCase::test_discover_page_2_returns_cumulative_24",
+  "tests/unit/test_workc_routes.py::WorkCRoutesTestCase::test_home_new_this_week_empty_when_only_old",
+  "tests/unit/test_workc_routes.py::WorkCRoutesTestCase::test_home_new_this_week_excludes_old_recipes",
+  "tests/unit/test_workc_routes.py::WorkCRoutesTestCase::test_home_new_this_week_shows_recent_recipes"
+]
