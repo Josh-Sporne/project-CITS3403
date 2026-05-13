@@ -13,7 +13,7 @@ from app.utils import json_body
 
 DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
              'Saturday', 'Sunday']
-MEAL_TYPES = ['breakfast', 'lunch', 'dinner']
+MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack']
 
 
 def _monday_of_week(d=None):
