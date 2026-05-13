@@ -106,6 +106,23 @@
             per_page: perPage
         });
 
+        // Keep the browser URL in sync so Back/Forward and sharing work correctly.
+        if (!append) {
+            const urlParams = new URLSearchParams();
+            if (currentQuery)                  urlParams.set('q', currentQuery);
+            if (currentCategory)               urlParams.set('category', currentCategory);
+            if (currentSort !== 'newest')      urlParams.set('sort', currentSort);
+            if (currentPage > 1)               urlParams.set('page', currentPage);
+            const newUrl = urlParams.toString()
+                ? `${window.location.pathname}?${urlParams}`
+                : window.location.pathname;
+            history.pushState(
+                { q: currentQuery, category: currentCategory, sort: currentSort, page: currentPage },
+                '',
+                newUrl
+            );
+        }
+
         // Skeleton placeholders only on a fresh fetch (not when appending more
         // results via Load More — those shouldn't blank out what's already there).
         if (!append) showSkeletons(resultsContainer, perPage);
@@ -204,6 +221,25 @@
         div.appendChild(document.createTextNode(str));
         return div.innerHTML;
     }
+
+    /* ── Restore state on Back/Forward ── */
+    window.addEventListener('popstate', (e) => {
+        const s = e.state || {};
+        currentQuery    = s.q        || '';
+        currentCategory = s.category || '';
+        currentSort     = s.sort     || 'newest';
+        currentPage     = s.page     || 1;
+
+        if (searchInput) searchInput.value = currentQuery;
+        if (sortSelect)  sortSelect.value  = currentSort;
+        tagPills.forEach(t => {
+            const match = t.dataset.category === currentCategory ||
+                          (!currentCategory && t.dataset.category === '');
+            t.classList.toggle('active', match);
+            t.setAttribute('aria-pressed', String(match));
+        });
+        fetchRecipes(false);
+    });
 
     /* ── Initial sync: apply ?category and ?q from URL on page load ── */
     if (initialCategory || initialQuery) {
