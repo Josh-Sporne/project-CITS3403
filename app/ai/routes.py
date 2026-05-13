@@ -94,6 +94,18 @@ def save_ai_recipe():
             success=False, error='visibility must be "private" or "public"',
         ), 400
 
+    duplicate = Recipe.query.filter(
+        Recipe.creator_id == current_user.id,
+        Recipe.title.ilike(payload['title']),
+        Recipe.is_deleted == False,
+    ).first()
+    if duplicate:
+        return jsonify(
+            success=False,
+            error=f'You already have a recipe called "{duplicate.title}".',
+            slug=duplicate.slug,
+        ), 409
+
     since = datetime.now(timezone.utc) - timedelta(hours=1)
     recent_saves = Recipe.query.filter(
         Recipe.creator_id == current_user.id,

@@ -236,6 +236,14 @@
             .then(res => {
                 if (res.ok && res.data.success) {
                     showSaveFeedback(res.data.slug, btn.dataset.vis === 'private');
+                } else if (res.data.slug) {
+                    if (feedbackEl) {
+                        feedbackEl.innerHTML =
+                            '<div class="alert alert-warning mb-0">' +
+                            escapeHtml(res.data.error) +
+                            ' <a href="/recipe/' + encodeURIComponent(res.data.slug) + '">View existing recipe</a>' +
+                            '</div>';
+                    }
                 } else {
                     alert(res.data.error || 'Could not save recipe.');
                 }
