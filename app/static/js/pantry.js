@@ -52,6 +52,11 @@
         ingredientInput.focus();
     });
 
+    document.getElementById('clearPantryBtn').addEventListener('click', function () {
+        chipsContainer.querySelectorAll('.pantry-chip').forEach(c => c.remove());
+        ingredientInput.focus();
+    });
+
     chipsContainer.addEventListener('click', function (e) {
         const closeBtn = e.target.closest('.btn-close');
         if (closeBtn) {
