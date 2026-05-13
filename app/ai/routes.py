@@ -1,6 +1,6 @@
 from datetime import datetime, timezone, timedelta
 
-from flask import render_template, request, jsonify, current_app
+from flask import render_template, jsonify, current_app
 from flask_login import login_required, current_user
 
 from app import db
@@ -38,7 +38,7 @@ def ai_suggest():
                 error=f'Rate limited — please wait {wait}s'
             ), 429
 
-    data = request.get_json(silent=True) or {}
+    data = json_body()
     ingredients = data.get('ingredients', [])
     if not isinstance(ingredients, list):
         return jsonify(success=False, error='ingredients must be a list'), 400

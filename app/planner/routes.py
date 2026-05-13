@@ -74,14 +74,14 @@ def planner_save():
     recipe_id = data.get('recipe_id')
     custom_text = data.get('custom_text', '')
 
-    if day is None or meal_type not in MEAL_TYPES:
+    if meal_type not in MEAL_TYPES:
         return jsonify(success=False, error='Invalid day or meal_type'), 400
-    try:
-        day = int(day)
-    except (ValueError, TypeError):
+    if not isinstance(day, int) or isinstance(day, bool):
         return jsonify(success=False, error='Invalid day'), 400
     if day < 0 or day > 6:
         return jsonify(success=False, error='Day must be 0-6'), 400
+    if not isinstance(custom_text, str):
+        return jsonify(success=False, error='custom_text must be text'), 400
 
     plan = _get_or_create_plan(current_user.id)
     item = MealPlanItem.query.filter_by(

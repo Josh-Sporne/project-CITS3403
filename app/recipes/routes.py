@@ -428,8 +428,11 @@ def rate(slug):
 def comment(slug):
     recipe = Recipe.query.filter_by(slug=slug, is_deleted=False).first_or_404()
     data = json_body()
-    body = str(data.get('body') or '').strip()
+    body = data.get('body')
 
+    if not isinstance(body, str):
+        return jsonify(success=False, error='Comment body must be text'), 400
+    body = body.strip()
     if not body:
         return jsonify(success=False, error='Comment cannot be empty'), 400
     if len(body) > 2000:
