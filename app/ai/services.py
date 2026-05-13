@@ -34,7 +34,7 @@ def get_pantry_matches(user_id, max_time=None):
 
     results = []
     for recipe in recipes:
-        ingredients = recipe.ingredients
+        ingredients = recipe.ingredients.all()
         total = len(ingredients)
         if total == 0:
             continue
