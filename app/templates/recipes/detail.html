@@ -46,13 +46,10 @@
             <span class="text-muted-custom">
                 <i class="bi bi-clock me-1"></i>{{ recipe.cooking_time or 30 }} min
             </span>
-            <span class="badge bg-info">{{ recipe.category|capitalize }}</span>
-            {% if recipe.tags %}
-            <span class="d-inline-flex flex-wrap gap-1">
-                {% for tag in recipe.tags %}
-                <span class="badge bg-secondary">#{{ tag.name }}</span>
-                {% endfor %}
-            </span>
+            {% if recipe.category %}
+            <a href="{{ url_for('recipes.discover') }}?category={{ recipe.category|lower }}"
+               class="badge bg-info text-decoration-none"
+               title="Filter by {{ recipe.category|capitalize }}">{{ recipe.category|capitalize }}</a>
             {% endif %}
             {% if recipe.creator %}
             <span class="text-muted-custom small">
@@ -154,6 +151,22 @@
         <span class="badge bg-success">You rated {{ user_rating }}/5</span>
         {% endif %}
     </div>
+
+    {% if rating_count > 0 %}
+    <div class="rating-breakdown" aria-label="Rating distribution">
+        {% for score in [5, 4, 3, 2, 1] %}
+        {% set count = rating_distribution[score] %}
+        {% set pct = (count / rating_count * 100) if rating_count else 0 %}
+        <div class="rating-breakdown-row">
+            <span class="rating-breakdown-label">{{ score }} <i class="bi bi-star-fill" aria-hidden="true"></i></span>
+            <div class="rating-breakdown-bar">
+                <div class="rating-breakdown-fill" style="width: {{ pct }}%;"></div>
+            </div>
+            <span class="rating-breakdown-count">{{ count }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 </section>
 
 <!-- Comments Section -->
