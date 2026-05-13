@@ -3819,3 +3819,13 @@ button.tag:focus-visible {
   outline: 2px solid var(--pt-mint, #6ee7b7);
   outline-offset: 2px;
 }
+
+/* Vertically center bi-* icons with their nav-link label text. */
+.navbar-nav .nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+.navbar-nav .nav-link > i {
+  line-height: 1;
+}

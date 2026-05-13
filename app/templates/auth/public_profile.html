@@ -40,7 +40,7 @@
   <div class="col-sm-6 col-lg-4">
     <div class="card bg-dark border-secondary h-100">
       {% if recipe.image_filename %}
-      <img src="{{ url_for('static', filename='uploads/' + recipe.image_filename) }}"
+      <img src="{{ recipe.image_filename if recipe.image_filename.startswith('http') else url_for('static', filename='uploads/' + recipe.image_filename) }}"
            class="card-img-top" alt="{{ recipe.title }}" style="height:180px;object-fit:cover;">
       {% else %}
       <img src="https://loremflickr.com/600/400/{{ recipe.slug|replace('-', ',') }},food?lock={{ recipe.id }}"

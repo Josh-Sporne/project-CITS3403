@@ -169,9 +169,16 @@
         // Use the recipe slug as comma-separated keywords (e.g. "kimchi-fried-rice"
         // → "kimchi,fried,rice") so Loremflickr returns more relevant food photos.
         const slugTags = (r.slug || '').replace(/-/g, ',');
-        const imgSrc = r.image_filename
-            ? `/static/uploads/${escapeHtml(r.image_filename)}`
-            : `https://loremflickr.com/600/400/${slugTags},food?lock=${r.id}`;
+        let imgSrc;
+        if (r.image_filename) {
+            // image_filename can be either a local upload filename OR a full URL
+            // (curated images in seed.py use Wikimedia Special:FilePath URLs).
+            imgSrc = r.image_filename.startsWith('http')
+                ? r.image_filename
+                : `/static/uploads/${escapeHtml(r.image_filename)}`;
+        } else {
+            imgSrc = `https://loremflickr.com/600/400/${slugTags},food?lock=${r.id}`;
+        }
         const imgBlock = `<img src="${imgSrc}" alt="${escapeHtml(r.title)}" style="width:100%;height:160px;object-fit:cover;border-radius:12px;margin-bottom:0.65rem;">`;
 
         const stars = Array.from({ length: 5 }, (_, i) =>
