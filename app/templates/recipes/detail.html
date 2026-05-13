@@ -3,8 +3,12 @@
 {% block title %}{{ recipe.title }} — Plate Theory{% endblock %}
 
 {% block content %}
-{% set hero_src = url_for('static', filename='uploads/' + recipe.image_filename) if recipe.image_filename
-                  else 'https://loremflickr.com/1200/800/' ~ recipe.slug|replace('-', ',') ~ ',food?lock=' ~ recipe.id %}
+{% if recipe.image_filename %}
+    {% set hero_src = recipe.image_filename if recipe.image_filename.startswith('http')
+                      else url_for('static', filename='uploads/' + recipe.image_filename) %}
+{% else %}
+    {% set hero_src = 'https://loremflickr.com/1200/800/' ~ recipe.slug|replace('-', ',') ~ ',food?lock=' ~ recipe.id %}
+{% endif %}
 
 <!-- Hero Image -->
 <div class="recipe-hero mb-4">
