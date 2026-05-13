@@ -1,0 +1,12 @@
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+pytest-cache-files-*/
+instance/
+*.db
+.env
+.DS_Store
+app/static/uploads/*
+!app/static/uploads/.gitkeep
