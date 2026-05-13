@@ -3695,3 +3695,53 @@ button.tag:focus-visible {
   color: var(--pt-muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* ── D4: neutralise browser default <button> styles for .tag pills ── */
+button.tag {
+  font-family: inherit;
+  line-height: 1.2;
+  cursor: pointer;
+}
+button.tag:focus-visible {
+  outline: 2px solid var(--pt-mint, #6ee7b7);
+  outline-offset: 2px;
+}
+
+/* ── C3: rating distribution breakdown bars on recipe detail ── */
+.rating-breakdown {
+  max-width: 360px;
+  margin-top: 0.5rem;
+}
+.rating-breakdown-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+  font-size: 0.82rem;
+}
+.rating-breakdown-label {
+  min-width: 38px;          /* keeps "5 star" / "1 star" rows aligned */
+  color: var(--pt-sun);
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+.rating-breakdown-bar {
+  flex: 1;
+  height: 8px;
+  background: var(--pt-surface2, rgba(255, 255, 255, 0.08));
+  border-radius: 4px;
+  overflow: hidden;
+}
+.rating-breakdown-fill {
+  height: 100%;
+  background: var(--pt-sun, #ffd93d);
+  transition: width 0.3s ease;
+}
+.rating-breakdown-count {
+  min-width: 28px;          /* keeps counts aligned regardless of digit count */
+  text-align: right;
+  color: var(--pt-muted);
+  font-variant-numeric: tabular-nums;
+}

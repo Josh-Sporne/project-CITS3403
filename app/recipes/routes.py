@@ -9,7 +9,7 @@ from flask_login import current_user, login_required
 from sqlalchemy import func
 
 from app import db
-from app.models import Comment, Rating, Recipe, RecipeIngredient, SavedRecipe
+from app.models import Comment, Rating, Recipe, RecipeIngredient, SavedRecipe, Tag
 from app.recipes import bp
 from app.recipes.forms import CATEGORY_CHOICES, RecipeForm
 from app.utils import json_body
@@ -184,6 +184,26 @@ def create():
         db.session.add(recipe)
         db.session.flush()
 
+        # C14: attach selected tags (existing IDs) and create-on-the-fly any new
+        # tag names typed into the free-text input.
+        tag_ids = request.form.getlist('tags')
+        for tid in tag_ids:
+            try:
+                tag = Tag.query.get(int(tid))
+                if tag and tag not in recipe.tags:
+                    recipe.tags.append(tag)
+            except (TypeError, ValueError):
+                continue
+        new_names = [n.strip() for n in request.form.get('new_tags', '').split(',')]
+        for name in [n for n in new_names if n]:
+            tag = Tag.query.filter_by(name=name.lower()).first()
+            if not tag:
+                tag = Tag(name=name.lower())
+                db.session.add(tag)
+                db.session.flush()
+            if tag not in recipe.tags:
+                recipe.tags.append(tag)
+
         names = request.form.getlist('ingredient_name[]')
         qtys = request.form.getlist('ingredient_qty[]')
         units = request.form.getlist('ingredient_unit[]')
@@ -203,7 +223,14 @@ def create():
         flash('Recipe created successfully!', 'success')
         return redirect(url_for('recipes.detail', slug=recipe.slug))
 
-    return render_template('recipes/create.html', form=form, edit=False)
+    available_tags = Tag.query.order_by(Tag.name).all()
+    return render_template(
+        'recipes/create.html',
+        form=form,
+        edit=False,
+        available_tags=available_tags,
+        selected_tag_ids=[],
+    )
 
 
 @bp.route('/recipe/<slug>')
@@ -264,12 +291,15 @@ def edit(slug):
 
     if request.method == 'GET':
         ingredients = recipe.ingredients.all()
+        available_tags = Tag.query.order_by(Tag.name).all()
         return render_template(
             'recipes/create.html',
             form=form,
             edit=True,
             recipe=recipe,
             ingredients=ingredients,
+            available_tags=available_tags,
+            selected_tag_ids=[t.id for t in recipe.tags],
         )
 
     if form.validate_on_submit():
@@ -297,6 +327,25 @@ def edit(slug):
             recipe.image_filename = filename
 
         RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
+
+        # C14: rebuild tag relations from form (clear-and-add mirrors checkbox state)
+        recipe.tags.clear()
+        for tid in request.form.getlist('tags'):
+            try:
+                tag = Tag.query.get(int(tid))
+                if tag and tag not in recipe.tags:
+                    recipe.tags.append(tag)
+            except (TypeError, ValueError):
+                continue
+        new_names = [n.strip() for n in request.form.get('new_tags', '').split(',')]
+        for name in [n for n in new_names if n]:
+            tag = Tag.query.filter_by(name=name.lower()).first()
+            if not tag:
+                tag = Tag(name=name.lower())
+                db.session.add(tag)
+                db.session.flush()
+            if tag not in recipe.tags:
+                recipe.tags.append(tag)
 
         names = request.form.getlist('ingredient_name[]')
         qtys = request.form.getlist('ingredient_qty[]')
