@@ -136,70 +136,101 @@ window.showToast = showToast;
 window.showErrorToast = showErrorToast;
 
 /* ─────────────────────────────────────────────
-   SCROLL REVEAL
-   - Only animates elements NOT already in viewport
-   - Exposes window.revealElements(nodeList) so
-     dynamically added cards (Load More, planner)
-     can be registered after the fact
+   SCROLL REVEAL — row-aware stagger
+   Cards in the same visual row fire together,
+   staggered left→right by column position.
+   Already-visible elements get no animation.
+   window.revealElements() is exposed so Load
+   More / dynamic content can register new cards.
 ───────────────────────────────────────────── */
-const _revealObserver = (() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        return { observe: () => {} };
-    }
-    return new IntersectionObserver((entries) => {
+const _prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const _revealObserver = _prefersReducedMotion
+    ? { observe: () => {}, unobserve: () => {} }
+    : new IntersectionObserver((entries) => {
+        // Group simultaneous entries by their rounded top position = visual row
+        const rows = new Map();
         entries.forEach(entry => {
             if (!entry.isIntersecting) return;
-            const el = entry.target;
-            el.classList.add('visible');
-            _revealObserver.unobserve(el);
+            const rowKey = Math.round(entry.boundingClientRect.top / 10) * 10;
+            if (!rows.has(rowKey)) rows.set(rowKey, []);
+            rows.get(rowKey).push(entry.target);
         });
-    }, { threshold: 0.07, rootMargin: '0px 0px -32px 0px' });
-})();
+
+        rows.forEach(rowEls => {
+            // Sort by horizontal position so stagger goes left → right
+            rowEls.sort((a, b) => a.getBoundingClientRect().left - b.getBoundingClientRect().left);
+            rowEls.forEach((el, colIdx) => {
+                el.style.setProperty('--reveal-index', colIdx);
+                el.classList.add('visible');
+                _revealObserver.unobserve(el);
+            });
+        });
+    }, { threshold: 0.08, rootMargin: '0px 0px -24px 0px' });
 
 function revealElements(nodeList) {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const viewport = window.innerHeight;
+    if (_prefersReducedMotion) return;
+    const vh = window.innerHeight;
 
-    // Group by parent to stagger siblings independently
-    const parentMap = new Map();
     Array.from(nodeList).forEach(el => {
-        const key = el.parentElement || document.body;
-        if (!parentMap.has(key)) parentMap.set(key, []);
-        parentMap.get(key).push(el);
-    });
-
-    parentMap.forEach(group => {
-        let staggerIdx = 0;
-        group.forEach(el => {
-            const rect = el.getBoundingClientRect();
-            if (rect.top < viewport - 20) {
-                // Already visible on load — show instantly, no animation
-                el.classList.add('reveal', 'visible');
-            } else {
-                el.classList.add('reveal');
-                el.style.setProperty('--reveal-index', staggerIdx++);
-                _revealObserver.observe(el);
-            }
-        });
+        if (el.classList.contains('reveal')) return; // already registered
+        const top = el.getBoundingClientRect().top;
+        el.classList.add('reveal');
+        if (top < vh - 10) {
+            // In viewport on load — show immediately, no delay
+            el.style.setProperty('--reveal-index', 0);
+            el.classList.add('visible');
+        } else {
+            _revealObserver.observe(el);
+        }
     });
 }
 window.revealElements = revealElements;
 
 function initScrollReveal() {
     revealElements(document.querySelectorAll(
-        '.pt-card, .card:not(.navbar *), .pt-panel, .animate-fade'
+        '.pt-card, .card:not(.navbar *):not(header *), .pt-panel, .animate-fade'
     ));
 }
 
 /* ─────────────────────────────────────────────
-   SCROLL-AWARE NAVBAR BLUR
+   SMART NAVBAR — hide on scroll down,
+   reveal on scroll up, blur when not at top
 ───────────────────────────────────────────── */
 function initNavbarScroll() {
     const navbar = document.querySelector('.navbar');
     if (!navbar) return;
-    const onScroll = () => navbar.classList.toggle('scrolled', window.scrollY > 40);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
+
+    let lastY = window.scrollY;
+    let ticking = false;
+
+    function update() {
+        const y = window.scrollY;
+        const atTop = y < 60;
+
+        if (atTop) {
+            navbar.classList.remove('nav-hidden', 'nav-scrolled');
+        } else if (y > lastY + 4) {
+            // Scrolling down — hide
+            navbar.classList.add('nav-hidden', 'nav-scrolled');
+        } else if (y < lastY - 4) {
+            // Scrolling up — reveal with blur
+            navbar.classList.remove('nav-hidden');
+            navbar.classList.add('nav-scrolled');
+        }
+
+        lastY = y;
+        ticking = false;
+    }
+
+    window.addEventListener('scroll', () => {
+        if (!ticking) {
+            requestAnimationFrame(update);
+            ticking = true;
+        }
+    }, { passive: true });
+
+    update();
 }
 
 /* ─────────────────────────────────────────────
@@ -234,52 +265,15 @@ function initNavbarScroll() {
     window.addEventListener('DOMContentLoaded', () => {
         cancelAnimationFrame(raf);
         bar.style.width = '100%';
-        setTimeout(() => { bar.classList.add('pt-progress-done'); }, 180);
+        setTimeout(() => bar.classList.add('pt-progress-done'), 180);
     });
 })();
 
 /* ─────────────────────────────────────────────
-   MAGNETIC BUTTON EFFECT — desktop only
-───────────────────────────────────────────── */
-function initMagneticButtons() {
-    if (!window.matchMedia('(pointer: fine)').matches) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-    function attachMagnetic(el) {
-        el.addEventListener('mousemove', e => {
-            const rect = el.getBoundingClientRect();
-            const cx = rect.left + rect.width / 2;
-            const cy = rect.top  + rect.height / 2;
-            const dx = (e.clientX - cx) * 0.28;
-            const dy = (e.clientY - cy) * 0.28;
-            el.style.transform = `translate(${dx}px, ${dy}px) scale(1.04)`;
-        });
-        el.addEventListener('mouseleave', () => {
-            el.style.transform = '';
-        });
-    }
-
-    // Attach to primary action buttons — not every btn
-    document.querySelectorAll('.btn-mint, .btn-outline-mint, .btn-coral').forEach(attachMagnetic);
-
-    // Re-attach when new buttons appear (e.g. pantry results)
-    const mo = new MutationObserver(muts => {
-        muts.forEach(m => m.addedNodes.forEach(n => {
-            if (n.nodeType !== 1) return;
-            if (n.matches?.('.btn-mint, .btn-outline-mint, .btn-coral')) attachMagnetic(n);
-            n.querySelectorAll?.('.btn-mint, .btn-outline-mint, .btn-coral').forEach(attachMagnetic);
-        }));
-    });
-    mo.observe(document.body, { childList: true, subtree: true });
-}
-
-/* ─────────────────────────────────────────────
    HERO WORD-BY-WORD REVEAL
-   Splits text into word spans with stagger
 ───────────────────────────────────────────── */
 function initHeroReveal() {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
+    if (_prefersReducedMotion) return;
     document.querySelectorAll('[data-word-reveal]').forEach(el => {
         const words = el.textContent.trim().split(/\s+/);
         el.innerHTML = words.map((w, i) =>
@@ -304,7 +298,6 @@ document.addEventListener('DOMContentLoaded', () => {
     autoDismissAlerts();
     initScrollReveal();
     initNavbarScroll();
-    initMagneticButtons();
     initHeroReveal();
     initGroceryCheck();
 });
