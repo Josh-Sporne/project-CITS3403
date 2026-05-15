@@ -8,6 +8,7 @@
     const feedbackEl = document.getElementById('pantry-save-feedback');
     const spinner = document.getElementById('loadingSpinner');
 
+    let lastMatches = [];
     let lastAiSuggestions = [];
 
     function getIngredients() {
@@ -157,6 +158,7 @@
     }
 
     function renderResults(matches, aiSuggestions) {
+        lastMatches = matches || [];
         let html = '';
 
         if (matches && matches.length > 0) {
@@ -207,22 +209,38 @@
                 const title = escapeHtml(s.title || 'Untitled');
                 const instr = escapeHtml(s.instructions || '');
                 const ingList = (s.ingredients || []).map(ingredientChipHtml).join('');
-                // AI suggestions don't have a saved image yet — use Loremflickr
-                // keyed off the suggestion's title so the same suggestion is
-                // visually consistent across re-renders.
+                const recipeHref = s.slug ? '/recipe/' + encodeURIComponent(s.slug) : '';
+                const editHref = s.slug ? recipeHref + '/edit' : '';
+                const mediaOpen = recipeHref ? `<a href="${recipeHref}" class="d-block mb-2" style="text-decoration:none;">` : '';
+                const mediaClose = recipeHref ? '</a>' : '';
+                const titleHtml = recipeHref
+                    ? `<a href="${recipeHref}" class="text-decoration-none" style="color: var(--pt-text);">${title}</a>`
+                    : title;
+                // Prefer a backend-sourced image URL; otherwise fall back to
+                // a deterministic placeholder keyed off the suggestion title.
                 const titleSlug = (s.title || 'food').toLowerCase().replace(/[^a-z0-9]+/g, ',').replace(/^,|,$/g, '');
-                const imgSrc = `https://loremflickr.com/600/400/${titleSlug || 'food'},food?lock=${idx}`;
+                const imgSrc = s.image_url || `https://loremflickr.com/600/400/${titleSlug || 'food'},food?lock=${idx}`;
+                const actionsHtml = recipeHref
+                    ? `
+                        <a href="${recipeHref}" class="btn btn-sm btn-mint">View recipe</a>
+                        <a href="${editHref}" class="btn btn-sm btn-outline-light">Edit</a>
+                    `
+                    : `
+                        <button type="button" class="btn btn-sm btn-outline-light" data-save-ai data-vis="private" data-idx="${idx}">Save for me</button>
+                        <button type="button" class="btn btn-sm btn-mint" data-save-ai data-vis="public" data-idx="${idx}">Save &amp; publish</button>
+                    `;
                 html += `
                 <div class="col-sm-6 col-lg-4">
                     <div class="pt-card h-100 pantry-ai-card d-flex flex-column" data-ai-index="${idx}">
+                        ${mediaOpen}
                         <img src="${imgSrc}" alt="${title}"
                              style="width:100%;height:120px;object-fit:cover;border-radius:12px;margin-bottom:0.5rem;">
-                        <h3 style="font-size:1rem">${title}</h3>
+                        ${mediaClose}
+                        <h3 style="font-size:1rem">${titleHtml}</h3>
                         <div class="text-muted-custom flex-grow-1" style="font-size:.78rem;white-space:pre-wrap;min-height:4rem">${instr}</div>
                         <div class="d-flex flex-wrap gap-1 mt-2 mb-3">${ingList}</div>
                         <div class="d-flex flex-wrap gap-2 mt-auto">
-                            <button type="button" class="btn btn-sm btn-outline-light" data-save-ai data-vis="private" data-idx="${idx}">Save for me</button>
-                            <button type="button" class="btn btn-sm btn-mint" data-save-ai data-vis="public" data-idx="${idx}">Save &amp; publish</button>
+                            ${actionsHtml}
                         </div>
                     </div>
                 </div>`;
@@ -277,8 +295,14 @@
             .then(r => r.json().then(data => ({ ok: r.ok, data })))
             .then(res => {
                 if (res.ok && res.data.success) {
+                    suggestion.slug = res.data.slug;
+                    suggestion.image_url = res.data.image_filename || suggestion.image_url;
+                    renderResults(lastMatches, lastAiSuggestions);
                     showSaveFeedback(res.data.slug, btn.dataset.vis === 'private');
                 } else if (res.data.slug) {
+                    suggestion.slug = res.data.slug;
+                    suggestion.image_url = res.data.image_filename || suggestion.image_url;
+                    renderResults(lastMatches, lastAiSuggestions);
                     if (feedbackEl) {
                         feedbackEl.innerHTML =
                             '<div class="alert alert-warning mb-0">' +

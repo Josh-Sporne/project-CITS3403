@@ -16,6 +16,7 @@ class Config:
     UPLOAD_FOLDER = os.path.join(basedir, 'app', 'static', 'uploads')
     MAX_CONTENT_LENGTH = 4 * 1024 * 1024
     OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+    PEXELS_API_KEY = os.environ.get('PEXELS_API_KEY')
 
 
 class TestConfig(Config):
