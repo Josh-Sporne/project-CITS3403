@@ -23,6 +23,7 @@ class User(UserMixin, db.Model):
         default=lambda: datetime.now(timezone.utc),
         onupdate=lambda: datetime.now(timezone.utc),
     )
+    avatar = db.Column(db.String(256), nullable=True)
 
     recipes = db.relationship('Recipe', backref='creator', lazy='dynamic')
     meal_plans = db.relationship('MealPlan', backref='owner', lazy='dynamic')
@@ -39,6 +40,8 @@ class User(UserMixin, db.Model):
 
     @property
     def avatar_url(self):
+        if self.avatar:
+            return self.avatar
         digest = hashlib.md5(self.email.lower().encode()).hexdigest()
         return f'https://www.gravatar.com/avatar/{digest}?d=identicon&s=80'
 

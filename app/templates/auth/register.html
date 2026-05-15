@@ -16,7 +16,7 @@
 
           <div class="mb-3">
             {{ form.username.label(class="form-label") }}
-            {{ form.username(class="form-control bg-dark text-light border-secondary", placeholder="Choose a username") }}
+            {{ form.username(class="form-control text-light", placeholder="Choose a username") }}
             {% for error in form.username.errors %}
               <div class="text-danger small mt-1">{{ error }}</div>
             {% endfor %}
@@ -24,7 +24,7 @@
 
           <div class="mb-3">
             {{ form.email.label(class="form-label") }}
-            {{ form.email(class="form-control bg-dark text-light border-secondary", placeholder="you@example.com") }}
+            {{ form.email(class="form-control text-light", placeholder="you@example.com") }}
             {% for error in form.email.errors %}
               <div class="text-danger small mt-1">{{ error }}</div>
             {% endfor %}
@@ -32,7 +32,7 @@
 
           <div class="mb-3">
             {{ form.password.label(class="form-label") }}
-            {{ form.password(class="form-control bg-dark text-light border-secondary", placeholder="Minimum 8 characters") }}
+            {{ form.password(class="form-control text-light", placeholder="Minimum 8 characters") }}
             {% for error in form.password.errors %}
               <div class="text-danger small mt-1">{{ error }}</div>
             {% endfor %}
@@ -40,18 +40,18 @@
 
           <div class="mb-3">
             {{ form.confirm_password.label(class="form-label") }}
-            {{ form.confirm_password(class="form-control bg-dark text-light border-secondary", placeholder="Re-enter password") }}
+            {{ form.confirm_password(class="form-control text-light", placeholder="Re-enter password") }}
             {% for error in form.confirm_password.errors %}
               <div class="text-danger small mt-1">{{ error }}</div>
             {% endfor %}
           </div>
 
           <div class="d-grid">
-            {{ form.submit(class="btn btn-primary") }}
+            {{ form.submit(class="btn btn-mint") }}
           </div>
         </form>
 
-        <p class="text-center text-muted mt-3 mb-0">
+        <p class="text-center text-muted-custom mt-3 mb-0">
           Already have an account?
           <a href="{{ url_for('auth.login') }}" class="text-decoration-none">Sign in</a>
         </p>
@@ -59,4 +59,8 @@
     </div>
   </div>
 </div>
+{% endblock %}
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/validation.js') }}"></script>
 {% endblock %}
