@@ -13,8 +13,8 @@ class RegisterForm(FlaskForm):
         'Username',
         validators=[
             DataRequired(),
-            Length(min=3, max=80),
-            Regexp(r'^[A-Za-z0-9_\-]{3,80}$', message='Username can only contain letters, numbers, - and _')
+            Length(min=3, max=24),
+            Regexp(r'^[A-Za-z0-9_\-]{3,24}$', message='Username can only contain letters, numbers, - and _')
         ],
     )
     email = StringField(
@@ -50,8 +50,8 @@ class LoginForm(FlaskForm):
 
 class EditProfileForm(FlaskForm):
     bio = TextAreaField('Bio', validators=[Length(max=500)])
-    new_username = StringField('New Username', validators=[Optional(), Length(3, 80),
-                    Regexp(r'^[A-Za-z0-9_\-]{3,80}$', message='Username can only contain letters, numbers, - and _')])
+    new_username = StringField('New Username', validators=[Optional(), Length(3, 24),
+                    Regexp(r'^[A-Za-z0-9_\-]{3,24}$', message='Username can only contain letters, numbers, - and _')])
     new_email = StringField('New Email', validators=[Optional(), Email()])
     new_password = PasswordField('New Password', validators=[Optional(), Length(min=8)])
     confirm_password = PasswordField('Confirm Password', validators=[EqualTo('new_password')])
