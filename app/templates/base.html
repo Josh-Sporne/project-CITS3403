@@ -19,10 +19,12 @@
     </script>
 </head>
 <body>
-    <!-- Background canvas — sits at z-index:-2 so orbs at z:-1 are visible above it -->
-    <div id="pt-bg-base" aria-hidden="true"></div>
+    <!-- Background layer stack: base(z:-4) → mesh(z:-3) → orbs(z:-2) → grain(z:-1 via body::before) → vignette(z:0 via body::after) -->
+    <div id="pt-bg-base"     aria-hidden="true"></div>
+    <div id="pt-bg-mesh"     aria-hidden="true"></div>
+    <div id="pt-bg-vignette" aria-hidden="true"></div>
 
-    <!-- Floating ambient orbs — fixed behind all content -->
+    <!-- Floating ambient orbs -->
     <div id="pt-orbs" aria-hidden="true">
         <div class="pt-orb pt-orb--mint"></div>
         <div class="pt-orb pt-orb--violet"></div>

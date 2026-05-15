@@ -68,15 +68,54 @@ html {
   min-height: 100%;
 }
 
-/* z-index:-2 canvas — sits behind orbs (z:-1) and all page content */
+/* Background layer stack (all position:fixed, increasing z-index):
+   #pt-bg-base     z:-4  solid canvas colour
+   #pt-bg-mesh     z:-3  rotating conic gradient
+   #pt-orbs        z:-2  colour blobs
+   body::before    z:-1  grain texture
+   #pt-bg-vignette z: 0  edge vignette
+   page content    z:auto / positive
+*/
+
 #pt-bg-base {
   position: fixed;
   inset: 0;
-  z-index: -2;
+  z-index: -4;
   background: var(--pt-bg);
   pointer-events: none;
   transition: background 0.35s ease;
 }
+
+#pt-bg-mesh {
+  position: fixed;
+  inset: -60%;
+  width: 220%;
+  height: 220%;
+  z-index: -3;
+  pointer-events: none;
+  background: conic-gradient(
+    from 0deg at 50% 50%,
+    rgba(94,245,192,0.055)   0deg,
+    rgba(179,136,255,0.07)  90deg,
+    rgba(255,123,137,0.05) 180deg,
+    rgba(255,211,61,0.04)  270deg,
+    rgba(94,245,192,0.055) 360deg
+  );
+  animation: pt-mesh-spin 50s linear infinite;
+  will-change: transform;
+}
+@keyframes pt-mesh-spin { to { transform: rotate(360deg); } }
+[data-theme="light"] #pt-bg-mesh { opacity: 0.35; }
+@media (prefers-reduced-motion: reduce) { #pt-bg-mesh { animation: none; } }
+
+#pt-bg-vignette {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 0%, transparent 45%, rgba(0,0,0,0.55) 100%);
+}
+[data-theme="light"] #pt-bg-vignette { opacity: 0.12; }
 
 body {
   font-family: var(--pt-font-body);
@@ -94,7 +133,7 @@ body::before {
   inset: 0;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
   pointer-events: none;
-  z-index: 0;
+  z-index: -1;
 }
 
 [data-theme="light"] body::before,
@@ -855,7 +894,7 @@ footer p {
 
 .pt-card img {
   width: 100%;
-  height: 160px;
+  height: 198px;
   object-fit: cover;
   border-radius: 12px;
   margin-bottom: 0.65rem;
@@ -1851,38 +1890,46 @@ html {
   margin-bottom: 0;
   border-radius: 0;
   display: block;
-  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  width: 100%;
+  height: 198px;
+  object-fit: cover;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1),
+              filter 0.55s ease;
+  filter: brightness(0.82) saturate(0.88);
   will-change: transform;
 }
 .pt-card:hover .pt-card-media img {
-  transform: scale(1.07);
+  transform: scale(1.08);
+  filter: brightness(1.0) saturate(1.1);
 }
-/* Lens: radial vignette fade-in */
+/* Lens: radial vignette — always present, fades OUT on hover */
 .pt-card-media::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at center, transparent 30%, rgba(11,10,16,0.72) 100%);
-  opacity: 0;
-  transition: opacity 0.4s ease;
+  background: radial-gradient(circle at 50% 46%, transparent 0%, transparent 28%, rgba(15,14,20,0.68) 100%);
+  opacity: 1;
+  transition: opacity 0.5s ease;
   pointer-events: none;
 }
 .pt-card:hover .pt-card-media::after {
-  opacity: 1;
+  opacity: 0;
 }
-/* Lens: accent line sweeps in from left along bottom */
+/* Lens: accent line sweeps left→right via scaleX, mint→violet gradient */
 .pt-card-media::before {
   content: '';
   position: absolute;
-  bottom: 0; left: 0;
-  width: 0; height: 2px;
-  background: var(--pt-mint);
-  transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  bottom: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--pt-mint), var(--pt-violet));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
   z-index: 1;
   pointer-events: none;
 }
 .pt-card:hover .pt-card-media::before {
-  width: 100%;
+  transform: scaleX(1);
 }
 
 /* Fallback: cards without the media wrapper keep their old zoom */
@@ -2255,7 +2302,7 @@ header {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: -1;
+  z-index: -2;
   overflow: hidden;
 }
 .pt-orb {
@@ -2308,4 +2355,168 @@ header {
 [data-theme="light"] .pt-orb--coral  { opacity: 0.07; }
 @media (prefers-reduced-motion: reduce) {
   .pt-orb { animation: none !important; }
+}
+
+/* ─────────────────────────────────────────────
+   HERO — two-column, Playfair Display editorial
+───────────────────────────────────────────── */
+.pt-hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
+  align-items: center;
+  padding: 72px 0 56px;
+}
+@media (max-width: 800px) {
+  .pt-hero { grid-template-columns: 1fr; padding: 48px 0 36px; gap: 36px; }
+  .pt-hero-visual { display: none; }
+}
+
+/* Eyebrow */
+.pt-hero-eyebrow {
+  font-family: var(--pt-font-heading);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--pt-mint);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.pt-hero-eyebrow::before {
+  content: '';
+  display: block;
+  width: 24px; height: 1.5px;
+  background: var(--pt-mint);
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+/* h1 — large italic Playfair, wipe-in via clip-path */
+.pt-hero-h1 {
+  font-family: var(--pt-font-display);
+  font-size: clamp(36px, 5vw, 62px);
+  font-weight: 700;
+  font-style: italic;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--pt-text);
+  margin-bottom: 20px;
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 0.95s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.pt-hero-h1.pt-hero-in {
+  clip-path: inset(0 0% 0 0);
+}
+.pt-hero-accent {
+  background: linear-gradient(135deg, var(--pt-mint) 0%, var(--pt-violet) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Subtitle */
+.pt-hero-sub {
+  font-size: 1rem;
+  line-height: 1.75;
+  color: var(--pt-muted);
+  max-width: 420px;
+  margin-bottom: 32px;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.7s ease 0.45s, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.45s;
+}
+.pt-hero-sub.pt-hero-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Buttons row */
+.pt-hero-btns {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.7s ease 0.65s, transform 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.65s;
+}
+.pt-hero-btns.pt-hero-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* Right-side visual — tilted featured card */
+.pt-hero-visual {
+  opacity: 0;
+  transform: translateY(20px) rotate(1.8deg);
+  transition: opacity 0.9s ease 0.35s, transform 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.35s;
+}
+.pt-hero-visual.pt-hero-in {
+  opacity: 1;
+  transform: rotate(1.8deg);
+}
+.pt-hero-visual:hover .pt-hero-card {
+  transform: rotate(-1.8deg) translateY(-6px);
+}
+
+.pt-hero-card {
+  display: block;
+  background: var(--pt-surface);
+  border: 1px solid var(--pt-border);
+  border-radius: var(--pt-radius);
+  overflow: hidden;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.45);
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  color: var(--pt-text);
+}
+.pt-hero-card-img {
+  height: 220px;
+  overflow: hidden;
+}
+.pt-hero-card-img img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 0;
+  margin: 0;
+  transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1), filter 0.55s ease;
+  filter: brightness(0.85);
+}
+.pt-hero-card:hover .pt-hero-card-img img {
+  transform: scale(1.07);
+  filter: brightness(1.0);
+}
+.pt-hero-card-body {
+  padding: 18px 20px;
+}
+.pt-hero-card-label {
+  font-family: var(--pt-font-heading);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--pt-sun);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.pt-hero-card-title {
+  font-family: var(--pt-font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--pt-text);
+  line-height: 1.35;
+  margin-bottom: 8px;
+}
+.pt-hero-card-meta {
+  font-size: 12px;
+  color: var(--pt-muted);
+  margin: 0;
+}
+
+[data-theme="light"] .pt-hero-card {
+  box-shadow: 0 20px 60px rgba(0,0,0,0.12);
 }
