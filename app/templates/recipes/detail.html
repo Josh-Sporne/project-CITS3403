@@ -204,59 +204,34 @@
     {% endif %}
 </section>
 
-{% if current_user.is_authenticated %}
-<!-- Add to Meal Plan modal -->
-<div class="modal fade" id="addToPlanModal" tabindex="-1" aria-labelledby="addToPlanModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
+<!-- Add to Meal Plan modal (self-contained — works without needing planner.js to be loaded) -->
+<div class="modal fade" id="addToPlanModal" tabindex="-1">
+  <div class="modal-dialog modal-sm">
     <div class="modal-content pt-panel">
       <div class="modal-header">
-        <h5 class="modal-title" id="addToPlanModalLabel"><i class="bi bi-calendar-plus me-2"></i>Add to Meal Plan</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <h6 class="modal-title">Add to Meal Plan</h6>
+        <button class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <p class="mb-3"><strong id="addToPlanRecipeTitle">{{ recipe.title }}</strong></p>
-        <input type="hidden" id="addToPlanRecipeId" value="{{ recipe.id }}">
-
-        <div class="mb-3">
-          <label for="addToPlanDay" class="form-label">Day</label>
-          <select id="addToPlanDay" class="form-select">
-            <option value="0">Monday</option>
-            <option value="1">Tuesday</option>
-            <option value="2">Wednesday</option>
-            <option value="3">Thursday</option>
-            <option value="4">Friday</option>
-            <option value="5">Saturday</option>
-            <option value="6">Sunday</option>
-          </select>
-        </div>
-
-        <div class="mb-3">
-          <label for="addToPlanMeal" class="form-label">Meal</label>
-          <select id="addToPlanMeal" class="form-select">
-            <option value="breakfast">Breakfast</option>
-            <option value="lunch">Lunch</option>
-            <option value="dinner">Dinner</option>
-            <option value="snack">Snack</option>
-          </select>
-        </div>
-
-        <div class="mb-3">
-          <label for="addToPlanNotes" class="form-label">Notes <small class="text-muted-custom">(optional)</small></label>
-          <textarea id="addToPlanNotes" class="form-control" rows="2"
-                    placeholder="e.g. cook with extra garlic, prep night before…"
-                    maxlength="500"></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-mint" id="addToPlanSaveBtn">
-          <i class="bi bi-check-lg me-1"></i> Add to Plan
-        </button>
+        <p id="addToPlanRecipeName" class="fw-bold mb-3"></p>
+        <input type="hidden" id="addToPlanRecipeId">
+        <select id="addToPlanDay" class="form-select mb-2">
+          <option value="0">Monday</option><option value="1">Tuesday</option>
+          <option value="2">Wednesday</option><option value="3">Thursday</option>
+          <option value="4">Friday</option><option value="5">Saturday</option>
+          <option value="6">Sunday</option>
+        </select>
+        <select id="addToPlanMeal" class="form-select mb-3">
+          <option value="breakfast">Breakfast</option>
+          <option value="lunch">Lunch</option>
+          <option value="dinner">Dinner</option>
+          <option value="snack">Snack</option>
+        </select>
+        <button class="btn btn-mint w-100" id="addToPlanSaveBtn">Add</button>
       </div>
     </div>
   </div>
 </div>
-{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -540,51 +515,36 @@
         });
     }
 
-    /* Add to Meal Plan modal — Save button POSTs to /api/planner/save.
-       The modal is opened via Bootstrap's data-bs-toggle (no JS needed for that). */
-    const addToPlanSaveBtn = document.getElementById('addToPlanSaveBtn');
-    if (addToPlanSaveBtn) {
-        addToPlanSaveBtn.addEventListener('click', () => {
-            const btn = addToPlanSaveBtn;
-            const recipeId = parseInt(document.getElementById('addToPlanRecipeId').value, 10);
-            const day = parseInt(document.getElementById('addToPlanDay').value, 10);
-            const mealType = document.getElementById('addToPlanMeal').value;
-            const notes = document.getElementById('addToPlanNotes').value || '';
+    /* Add to Meal Plan — self-contained version (planner.js isn't loaded here).
+       Exposes openAddToPlanModal globally so the inline onclick on the button
+       can call it, then wires the Save button to POST /api/planner/save. */
+    window.openAddToPlanModal = function (recipeId, recipeName) {
+        document.getElementById('addToPlanRecipeId').value = recipeId;
+        document.getElementById('addToPlanRecipeName').textContent = recipeName;
+        new bootstrap.Modal(document.getElementById('addToPlanModal')).show();
+    };
 
-            // Disable button during request to prevent double-submit.
-            btn.disabled = true;
-            const originalHtml = btn.innerHTML;
-            btn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Adding…';
+    document.getElementById('addToPlanSaveBtn')?.addEventListener('click', () => {
+        // <select> values are strings; the route's strict isinstance(day, int)
+        // check rejects strings, so parseInt before sending.
+        const recipeId = parseInt(document.getElementById('addToPlanRecipeId').value, 10);
+        const day = parseInt(document.getElementById('addToPlanDay').value, 10);
+        const mealType = document.getElementById('addToPlanMeal').value;
 
-            fetch('/api/planner/save', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
-                body: JSON.stringify({
-                    recipe_id: recipeId,
-                    day: day,
-                    meal_type: mealType,
-                    custom_text: notes,
-                }),
-            })
-            .then(r => r.json())
-            .then(data => {
-                btn.disabled = false;
-                btn.innerHTML = originalHtml;
-                if (data.success) {
-                    bootstrap.Modal.getOrCreateInstance(document.getElementById('addToPlanModal')).hide();
-                    if (window.showToast) window.showToast('Added to meal plan');
-                    document.getElementById('addToPlanNotes').value = '';
-                } else {
-                    if (window.showErrorToast) window.showErrorToast(data.error || 'Could not add to meal plan');
-                }
-            })
-            .catch(() => {
-                btn.disabled = false;
-                btn.innerHTML = originalHtml;
-                if (window.showErrorToast) window.showErrorToast('Could not add to meal plan');
-            });
+        fetch('/api/planner/save', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+            body: JSON.stringify({recipe_id: recipeId, day: day, meal_type: mealType}),
+        })
+        .then(r => r.json())
+        .then(() => {
+            bootstrap.Modal.getInstance(document.getElementById('addToPlanModal')).hide();
+            if (window.showToast) window.showToast('Added to meal plan');
+        })
+        .catch(() => {
+            if (window.showErrorToast) window.showErrorToast('Could not add to meal plan.');
         });
-    }
+    });
 })();
 </script>
 {% endblock %}
