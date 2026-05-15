@@ -1057,6 +1057,8 @@ footer p {
 /* --- Star Rating --- */
 .star-rating {
   display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 0.15rem;
   font-size: 0.9rem;
 }
@@ -1301,29 +1303,117 @@ footer p {
 
 /* --- Recipe Hero --- */
 .recipe-hero {
-  height: 180px;
   border-radius: 20px;
   background: linear-gradient(160deg, #3d2a5c, var(--pt-coral));
   margin-bottom: 1.25rem;
   position: relative;
   overflow: hidden;
+  border: 1px solid var(--pt-border);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18);
 }
 
 .recipe-hero::after {
-  content: attr(data-emoji);
+  content: "";
   position: absolute;
-  font-size: 4rem;
-  right: 1.5rem;
-  bottom: 0.5rem;
-  opacity: 0.35;
-  filter: blur(0.5px);
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.04), rgba(0, 0, 0, 0.22));
+  pointer-events: none;
 }
 
-.recipe-hero img {
+.recipe-hero img,
+.recipe-hero-img {
   width: 100%;
-  height: 100%;
+  display: block;
+  aspect-ratio: 16 / 7;
+  max-height: 460px;
   object-fit: cover;
+  object-position: center;
   border-radius: 20px;
+  cursor: zoom-in;
+}
+
+.pt-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(8, 8, 12, 0.88);
+  backdrop-filter: blur(10px);
+}
+
+.pt-lightbox.show {
+  display: flex;
+}
+
+.pt-lightbox-img {
+  max-width: min(1100px, 100%);
+  max-height: calc(100vh - 4rem);
+  width: auto;
+  height: auto;
+  display: block;
+  border-radius: 18px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+}
+
+.pt-lightbox-close {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.pt-lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.rating-breakdown {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.rating-breakdown-row {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 28px;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.rating-breakdown-label {
+  font-size: 0.84rem;
+  color: var(--pt-text-secondary);
+  white-space: nowrap;
+}
+
+.rating-breakdown-bar {
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.rating-breakdown-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--pt-sun), var(--pt-mint));
+}
+
+.rating-breakdown-count {
+  font-size: 0.82rem;
+  color: var(--pt-muted);
+  text-align: right;
 }
 
 /* --- Discover Tags (scrollable) --- */
@@ -1399,8 +1489,17 @@ footer p {
   }
 
   .recipe-hero {
-    height: 140px;
     border-radius: 14px;
+  }
+
+  .recipe-hero img,
+  .recipe-hero-img {
+    aspect-ratio: 16 / 9;
+    max-height: 260px;
+  }
+
+  .pt-lightbox {
+    padding: 1rem;
   }
 
   .navbar-brand {

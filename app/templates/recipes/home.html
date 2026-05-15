@@ -42,13 +42,15 @@
     <div class="pt-hero-visual" id="pt-hero-visual">
         {% set hero_recipe = trending_recipes[0] if trending_recipes else none %}
         {% if hero_recipe %}
+        {% if hero_recipe.image_filename %}
+            {% set hero_card_src = hero_recipe.image_filename if hero_recipe.image_filename.startswith('http')
+                                  else url_for('static', filename='uploads/' + hero_recipe.image_filename) %}
+        {% else %}
+            {% set hero_card_src = 'https://loremflickr.com/1200/800/' ~ hero_recipe.slug|replace('-', ',') ~ ',food?lock=' ~ hero_recipe.id %}
+        {% endif %}
         <a href="/recipe/{{ hero_recipe.slug }}" class="pt-hero-card" style="text-decoration:none;">
             <div class="pt-hero-card-img">
-                {% if hero_recipe.image_filename %}
-                <img src="{{ url_for('static', filename='uploads/' + hero_recipe.image_filename) }}" alt="{{ hero_recipe.title }}">
-                {% else %}
-                <div class="img-ph" style="height:100%;margin:0;border-radius:0;"></div>
-                {% endif %}
+                <img src="{{ hero_card_src }}" alt="{{ hero_recipe.title }}">
             </div>
             <div class="pt-hero-card-body">
                 <p class="pt-hero-card-label">

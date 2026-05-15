@@ -1,11 +1,12 @@
 from datetime import datetime, timezone, timedelta
 
-from flask import render_template, jsonify, current_app
+from flask import render_template, jsonify, current_app, request
 from flask_login import login_required, current_user
 
 from app import db
 from app.models import PantryItem, Recipe, RecipeIngredient
 from app.ai import bp
+from app.utils import json_body
 from app.ai.recipe_defaults import (
     DEFAULT_AI_COOKING_TIME,
     MAX_AI_SAVES_PER_HOUR,
@@ -29,15 +30,6 @@ def pantry():
 @login_required
 def ai_suggest():
     now = datetime.now(timezone.utc)
-    if current_user.last_ai_call:
-        elapsed = now - current_user.last_ai_call.replace(tzinfo=timezone.utc)
-        if elapsed < timedelta(seconds=30):
-            wait = 30 - int(elapsed.total_seconds())
-            return jsonify(
-                success=False,
-                error=f'Rate limited — please wait {wait}s'
-            ), 429
-
     data = json_body()
     ingredients = data.get('ingredients', [])
     if not isinstance(ingredients, list):
@@ -63,10 +55,19 @@ def ai_suggest():
 
     ai_suggestions = []
     if use_ai:
+        if current_user.last_ai_call:
+            elapsed = now - current_user.last_ai_call.replace(tzinfo=timezone.utc)
+            if elapsed < timedelta(seconds=30):
+                wait = 30 - int(elapsed.total_seconds())
+                return jsonify(
+                    success=False,
+                    error=f'Rate limited — please wait {wait}s'
+                ), 429
+
         api_key = current_app.config.get('OPENAI_API_KEY')
         ai_suggestions = get_ai_suggestions(ingredients, preferences, api_key)
+        current_user.last_ai_call = now
 
-    current_user.last_ai_call = now
     db.session.commit()
 
     return jsonify(
