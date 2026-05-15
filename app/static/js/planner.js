@@ -35,6 +35,13 @@
         if (removeBtn) {
             const itemId = removeBtn.dataset.itemId;
             if (!itemId) return;
+
+            // Confirm before destructive action
+            if (!confirm('Remove this meal from your plan?')) return;
+
+            // Disable the button while request is in flight
+            removeBtn.disabled = true;
+
             fetch('/api/planner/remove', {
                 method: 'POST',
                 headers: {
@@ -45,10 +52,18 @@
             })
                 .then(r => r.json())
                 .then(data => {
-                    if (data.success) safeReload();
+                    if (data.success) {
+                        // No modal is open here, so safeReload() won't fire — just reload directly.
+                        if (window.showToast) window.showToast('Meal removed');
+                        location.reload();
+                    } else {
+                        removeBtn.disabled = false;
+                        if (window.showErrorToast) window.showErrorToast(data.error || 'Could not remove meal');
+                    }
                 })
                 .catch(() => {
-                    showErrorToast('Could not remove meal. Please try again.');
+                    removeBtn.disabled = false;
+                    if (window.showErrorToast) window.showErrorToast('Could not remove meal. Please try again.');
                 });
         }
     });
