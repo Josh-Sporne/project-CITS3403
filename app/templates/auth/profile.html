@@ -314,7 +314,7 @@
                 </div>
 
                 <div class="mb-4">
-                    <label for="image" class="form-label">Profile Picture</label>
+                    <label for="image" class="form-label" style="color: var(--pt-text-secondary)">Profile Picture</label>
                     {{ edit_form.image(class="form-control", id="image") }}
                     {% for error in edit_form.image.errors %}
                     <div class="form-text text-coral">{{ error }}</div>
