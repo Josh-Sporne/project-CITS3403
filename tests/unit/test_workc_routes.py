@@ -75,21 +75,21 @@ class WorkCRoutesTestCase(unittest.TestCase):
         resp = self.client.get('/discover')
         self.assertEqual(resp.status_code, 200)
         # The page renders 12 cards (per_page default).
-        self.assertEqual(resp.text.count('class="pt-card'), 12)
+        self.assertEqual(resp.text.count('class="pt-card h-100'), 12)
 
     def test_discover_page_2_returns_cumulative_24(self):
         self._seed_recipes(30)
         resp = self.client.get('/discover?page=2')
         self.assertEqual(resp.status_code, 200)
         # ?page=2 should show recipes 1..24 cumulatively (B5 behaviour).
-        self.assertEqual(resp.text.count('class="pt-card'), 24)
+        self.assertEqual(resp.text.count('class="pt-card h-100'), 24)
 
     def test_discover_negative_page_clamps_to_one(self):
         self._seed_recipes(15)
         resp = self.client.get('/discover?page=-5')
         self.assertEqual(resp.status_code, 200)
         # Clamped to page=1, so 12 recipes (not zero, not 500).
-        self.assertEqual(resp.text.count('class="pt-card'), 12)
+        self.assertEqual(resp.text.count('class="pt-card h-100'), 12)
 
     def test_discover_excludes_private_and_deleted(self):
         creator = self._make_user()
@@ -101,7 +101,7 @@ class WorkCRoutesTestCase(unittest.TestCase):
         db.session.commit()
 
         resp = self.client.get('/discover')
-        self.assertEqual(resp.text.count('class="pt-card'), 2)
+        self.assertEqual(resp.text.count('class="pt-card h-100'), 2)
 
     # ── C-V10: categories built from DB, sorted alphabetically ────────
     def test_discover_categories_reflect_db_and_are_sorted(self):

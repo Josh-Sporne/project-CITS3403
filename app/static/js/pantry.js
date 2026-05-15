@@ -28,10 +28,20 @@
         if (!name) return;
         if (getIngredients().some(n => n.toLowerCase() === name.toLowerCase())) return;
 
+        // D14: build the chip with createElement + textContent so the user
+        // ingredient name (which can contain anything) can never be parsed
+        // as HTML — closes a stored XSS hole.
         const span = document.createElement('span');
         span.className = 'chip pantry-chip chip-enter';
         span.dataset.name = name;
-        span.innerHTML = `${name} <button type="button" class="btn-close btn-close-white ms-1" style="font-size:.5rem;vertical-align:middle" aria-label="Remove"></button>`;
+        span.appendChild(document.createTextNode(name + ' '));
+        const closeBtn = document.createElement('button');
+        closeBtn.type = 'button';
+        closeBtn.className = 'btn-close btn-close-white ms-1';
+        closeBtn.style.fontSize = '.5rem';
+        closeBtn.style.verticalAlign = 'middle';
+        closeBtn.setAttribute('aria-label', 'Remove');
+        span.appendChild(closeBtn);
         chipsContainer.appendChild(span);
         // Remove animation class after it plays so re-adds don't re-trigger
         span.addEventListener('animationend', () => span.classList.remove('chip-enter'), { once: true });
