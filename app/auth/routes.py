@@ -198,8 +198,11 @@ def public_profile(username):
     comment_list=[]
     for i in range(len(comments)):
         comment_list.append(Recipe.query.filter_by(id=comments[i].recipe_id).all() + [comments[i]])
-    
-    ratings = Rating.query.filter_by(user_id=current_user.id).order_by(Rating.created_at.desc()).all()
+
+    # Bug fix: was current_user.id — that 500'd for anonymous viewers AND
+    # always showed the VIEWER's ratings instead of the profile owner's.
+    # Fixed to use user.id (the profile being viewed).
+    ratings = Rating.query.filter_by(user_id=user.id).order_by(Rating.created_at.desc()).all()
     rating_list=[]
     for i in range(len(ratings)):
         rating_list.append(Recipe.query.filter_by(id=ratings[i].recipe_id).all() + [ratings[i]])
