@@ -68,15 +68,16 @@
     let totalResults = "{{ total }}";
 
     function buildCardHtml(u) {
-        const imgBlock = u.avatar_url
-            ? `<img src=" ${u.avatar_url}" alt="${u.username}" class="rounded-circle" width="40" height="40"
-                         style="border:2px solid var(--pt-border)">`
+        // Render to match the server-rendered card layout in this file so the
+        // grid looks consistent before/after a search (avatar + name in a row).
+        const avatar = u.avatar_url
+            ? `<img src="${u.avatar_url}" alt="${u.username}" class="rounded-circle me-2" width="36">`
             : '';
         return `
-        <article class="pt-card h-100">
-            <div class="img-ph">${imgBlock}</div>
-            <h3><a href="/user/${u.username}" class="text-decoration-none" style="color:var(--pt-text);">${u.username}</a></h3>
-        </article>`;
+        <div class="card-body d-flex align-items-center mb-3" style="padding-bottom: 0">
+            ${avatar}
+            <a href="/user/${u.username}" class="me-auto">${u.username}</a>
+        </div>`;
     }
 
     function fetchUsers(append) {
@@ -99,7 +100,7 @@
 
                 data.users.forEach(u => {
                     const col = document.createElement('div');
-                    col.className = 'col-lg-3 col-md-4 col-sm-6';
+                    col.className = 'card mb-3 animate-fade col-lg-4 col-md-6 col-sm-6';
                     col.innerHTML = buildCardHtml(u);
                     grid.appendChild(col);
                 });
