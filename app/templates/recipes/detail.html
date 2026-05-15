@@ -262,17 +262,34 @@
           </select>
         </div>
 
-        <div class="mb-3">
-          <label for="addToPlanNotes" class="form-label">Notes <small class="text-muted-custom">(optional)</small></label>
-          <textarea id="addToPlanNotes" class="form-control" rows="2"
-                    placeholder="e.g. cook with extra garlic, prep night before…"
-                    maxlength="500"></textarea>
-        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
         <button type="button" class="btn btn-mint" id="addToPlanSaveBtn">
           <i class="bi bi-check-lg me-1"></i> Add to Plan
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Comment confirmation modal — styled equivalent of native confirm() -->
+<div class="modal fade" id="deleteCommentModal" tabindex="-1" aria-labelledby="deleteCommentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content pt-panel">
+      <div class="modal-header">
+        <h6 class="modal-title" id="deleteCommentModalLabel">
+          <i class="bi bi-trash me-2 text-coral"></i>Delete comment?
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-0">This cannot be undone.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-coral" id="confirmDeleteCommentBtn">
+          <i class="bi bi-trash me-1"></i> Delete
         </button>
       </div>
     </div>
@@ -395,11 +412,19 @@
                     const dt = data.comment.created_at ? new Date(data.comment.created_at) : new Date();
                     const dateStr = dt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
 
-                    // Build DOM with createElement/textContent so user-supplied
-                    // strings are NEVER parsed as HTML (XSS safe).
+                    // Build DOM matching server-rendered structure (d-flex header
+                    // with author/date + edit/delete buttons, then body, then
+                    // hidden inline edit form). createElement/textContent so
+                    // user-supplied strings are never parsed as HTML.
                     const div = document.createElement('div');
                     div.className = 'review';
+                    div.dataset.commentId = data.comment.id;   // event delegation uses this
 
+                    // Header row
+                    const header = document.createElement('div');
+                    header.className = 'd-flex justify-content-between align-items-start';
+
+                    const left = document.createElement('div');
                     const strong = document.createElement('strong');
                     const authorLink = document.createElement('a');
                     authorLink.href = '/user/' + encodeURIComponent(data.comment.author);
@@ -407,18 +432,65 @@
                     authorLink.style.color = 'var(--pt-text)';
                     authorLink.textContent = '@' + data.comment.author;
                     strong.appendChild(authorLink);
-
                     const dateSpan = document.createElement('span');
                     dateSpan.className = 'text-muted-custom small ms-2';
                     dateSpan.textContent = dateStr;
+                    left.appendChild(strong);
+                    left.appendChild(dateSpan);
+                    header.appendChild(left);
 
+                    // Edit/Delete button group (always for the just-posted comment — it's yours)
+                    const btnGroup = document.createElement('div');
+                    btnGroup.className = 'btn-group btn-group-sm';
+                    btnGroup.setAttribute('role', 'group');
+                    btnGroup.setAttribute('aria-label', 'Comment actions');
+                    const editBtn = document.createElement('button');
+                    editBtn.type = 'button';
+                    editBtn.className = 'btn btn-sm btn-outline-light comment-edit-btn';
+                    editBtn.style.fontSize = '.65rem';
+                    editBtn.style.padding = '.1rem .4rem';
+                    editBtn.setAttribute('aria-label', 'Edit comment');
+                    editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
+                    const delBtn = document.createElement('button');
+                    delBtn.type = 'button';
+                    delBtn.className = 'btn btn-sm btn-outline-coral comment-delete-btn';
+                    delBtn.style.fontSize = '.65rem';
+                    delBtn.style.padding = '.1rem .4rem';
+                    delBtn.setAttribute('aria-label', 'Delete comment');
+                    delBtn.innerHTML = '<i class="bi bi-trash"></i>';
+                    btnGroup.appendChild(editBtn);
+                    btnGroup.appendChild(delBtn);
+                    header.appendChild(btnGroup);
+
+                    div.appendChild(header);
+
+                    // Body
                     const body = document.createElement('p');
-                    body.className = 'mb-0 mt-1';
+                    body.className = 'mb-0 mt-1 comment-body';
                     body.textContent = data.comment.body;
-
-                    div.appendChild(strong);
-                    div.appendChild(dateSpan);
                     div.appendChild(body);
+
+                    // Hidden inline edit form (will be shown when pencil is clicked)
+                    const editForm = document.createElement('div');
+                    editForm.className = 'comment-edit-form mt-2';
+                    editForm.hidden = true;
+                    const editTextarea = document.createElement('textarea');
+                    editTextarea.className = 'form-control form-control-sm mb-2';
+                    editTextarea.maxLength = 2000;
+                    editTextarea.rows = 2;
+                    const editSave = document.createElement('button');
+                    editSave.type = 'button';
+                    editSave.className = 'btn btn-sm btn-mint comment-edit-save';
+                    editSave.textContent = 'Save';
+                    const editCancel = document.createElement('button');
+                    editCancel.type = 'button';
+                    editCancel.className = 'btn btn-sm btn-outline-light comment-edit-cancel';
+                    editCancel.textContent = 'Cancel';
+                    editForm.appendChild(editTextarea);
+                    editForm.appendChild(editSave);
+                    editForm.appendChild(document.createTextNode(' '));
+                    editForm.appendChild(editCancel);
+                    div.appendChild(editForm);
 
                     commentsList.insertBefore(div, commentsList.firstChild);
                     commentInput.value = '';
@@ -571,7 +643,6 @@
             const recipeId = parseInt(document.getElementById('addToPlanRecipeId').value, 10);
             const day = parseInt(document.getElementById('addToPlanDay').value, 10);
             const mealType = document.getElementById('addToPlanMeal').value;
-            const notes = document.getElementById('addToPlanNotes').value || '';
 
             btn.disabled = true;
             const originalHtml = btn.innerHTML;
@@ -584,7 +655,6 @@
                     recipe_id: recipeId,
                     day: day,
                     meal_type: mealType,
-                    custom_text: notes,
                 }),
             })
             .then(r => r.json())
@@ -594,7 +664,6 @@
                 if (data.success) {
                     bootstrap.Modal.getOrCreateInstance(document.getElementById('addToPlanModal')).hide();
                     if (window.showToast) window.showToast('Added to meal plan');
-                    document.getElementById('addToPlanNotes').value = '';
                 } else {
                     if (window.showErrorToast) window.showErrorToast(data.error || 'Could not add to meal plan');
                 }
@@ -605,7 +674,7 @@
                 if (window.showErrorToast) window.showErrorToast('Could not add to meal plan');
             });
         });
-    });
+    }
 
     /* Comment edit + delete — event-delegated on the comments list so it works
        for both server-rendered comments and JS-rendered ones (newly posted in this session). */
@@ -667,29 +736,62 @@
                 return;
             }
 
-            // DELETE — confirm + POST to /comment/<id>/delete
+            // DELETE — open the styled confirm modal; actual delete fires
+            // from the modal's Confirm button (handler below).
             if (e.target.closest('.comment-delete-btn')) {
-                if (!confirm('Delete this comment? This cannot be undone.')) return;
-                fetch(`/comment/${commentId}/delete`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        review.remove();
-                        if (window.showToast) window.showToast('Comment deleted');
-                    } else if (window.showErrorToast) {
-                        window.showErrorToast(data.error || 'Could not delete comment');
-                    }
-                })
-                .catch(() => {
-                    if (window.showErrorToast) window.showErrorToast('Could not delete comment');
-                });
+                pendingCommentDelete = { review, commentId };
+                if (deleteCommentModal) deleteCommentModal.show();
                 return;
             }
         });
     }
+
+    /* Delete-comment styled confirm modal — actual fetch happens here */
+    const deleteCommentModalEl = document.getElementById('deleteCommentModal');
+    const deleteCommentModal = deleteCommentModalEl ? new bootstrap.Modal(deleteCommentModalEl) : null;
+    let pendingCommentDelete = null;
+
+    document.getElementById('confirmDeleteCommentBtn')?.addEventListener('click', function () {
+        if (!pendingCommentDelete) return;
+        const { review, commentId } = pendingCommentDelete;
+        const confirmBtn = this;
+
+        confirmBtn.disabled = true;
+        const originalHtml = confirmBtn.innerHTML;
+        confirmBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Deleting…';
+
+        fetch(`/comment/${commentId}/delete`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                if (window.showToast) window.showToast('Comment deleted');
+                deleteCommentModalEl.addEventListener('hidden.bs.modal', () => review.remove(), { once: true });
+                deleteCommentModal.hide();
+            } else {
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = originalHtml;
+                if (window.showErrorToast) window.showErrorToast(data.error || 'Could not delete comment');
+            }
+        })
+        .catch(() => {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = originalHtml;
+            if (window.showErrorToast) window.showErrorToast('Could not delete comment');
+        });
+    });
+
+    // Reset pending state when modal closes via Cancel/Esc/backdrop
+    deleteCommentModalEl?.addEventListener('hidden.bs.modal', function () {
+        const btn = document.getElementById('confirmDeleteCommentBtn');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-trash me-1"></i> Delete';
+        }
+        pendingCommentDelete = null;
+    });
 })();
 </script>
 {% endblock %}

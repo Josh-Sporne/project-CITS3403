@@ -216,7 +216,7 @@
 
         return `
         <article class="pt-card h-100">
-            <div class="pt-card-media">${mediaBlock}</div>
+            <a href="/recipe/${slug}" class="pt-card-media d-block" aria-label="View ${title}">${mediaBlock}</a>
             <h3><a href="/recipe/${slug}" class="text-decoration-none" style="color:var(--pt-text);">${title}</a>${aiBadge}</h3>
             <p>
                 <i class="bi bi-clock"></i> ${time} min

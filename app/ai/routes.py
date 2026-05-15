@@ -41,14 +41,24 @@ def ai_suggest():
     if not ingredients:
         return jsonify(success=False, error='No ingredients provided'), 400
 
-    PantryItem.query.filter_by(user_id=current_user.id).delete()
+    # X-MED-2: validate the cleaned list is non-empty BEFORE wiping the existing
+    # pantry — otherwise submitting `["", "  "]` would silently empty the pantry.
+    # Also validates that each item is a string (X-HIGH-8 followup).
+    cleaned = []
     for name in ingredients:
-        name = name.strip()
-        if name:
-            db.session.add(PantryItem(
-                user_id=current_user.id,
-                ingredient_name=name,
-            ))
+        if isinstance(name, str):
+            name = name.strip()
+            if name:
+                cleaned.append(name)
+    if not cleaned:
+        return jsonify(success=False, error='No valid ingredients provided'), 400
+
+    PantryItem.query.filter_by(user_id=current_user.id).delete()
+    for name in cleaned:
+        db.session.add(PantryItem(
+            user_id=current_user.id,
+            ingredient_name=name,
+        ))
     db.session.commit()
 
     max_time = data.get('max_time')

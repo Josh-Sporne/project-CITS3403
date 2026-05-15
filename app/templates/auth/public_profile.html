@@ -106,9 +106,14 @@
             <div class="d-flex align-items-center gap-2 mb-3">
               <span class="text-sun"><i class="bi bi-star-fill"></i> {{ recipe.avg_rating }}</span>
               <span style="color: var(--pt-muted);"><i class="bi bi-clock"></i> {{ recipe.cooking_time }} min</span>
-              <span class="badge" style="background: rgba(179,136,255,0.15); color: var(--pt-violet);">
-                {{ recipe.category }}
-              </span>
+              {% if recipe.category %}
+              <a href="{{ url_for('recipes.discover') }}?category={{ recipe.category|lower }}"
+                 class="badge text-decoration-none"
+                 style="background: rgba(179,136,255,0.15); color: var(--pt-violet);"
+                 title="Filter by {{ recipe.category|capitalize }}">
+                {{ recipe.category|capitalize }}
+              </a>
+              {% endif %}
             </div>
             <div class="d-flex gap-2">
               <a href="/recipe/{{ recipe.slug }}" class="btn btn-sm btn-outline-mint flex-fill">
