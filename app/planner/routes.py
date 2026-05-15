@@ -13,7 +13,7 @@ from app.utils import json_body
 
 DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
              'Saturday', 'Sunday']
-MEAL_TYPES = ['breakfast', 'lunch', 'dinner']
+MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack']
 
 
 def _monday_of_week(d=None):
@@ -37,7 +37,16 @@ def _get_or_create_plan(user_id, week_start=None, commit=True):
 @bp.route('/planner')
 @login_required
 def planner():
-    plan = _get_or_create_plan(current_user.id, commit=False)
+    week_str = request.args.get('week')
+    week_start = None
+    if week_str:
+        try:
+            week_start = _monday_of_week(date.fromisoformat(week_str))
+        except ValueError:
+            week_start = None
+    week_start = week_start or _monday_of_week()
+
+    plan = _get_or_create_plan(current_user.id, week_start=week_start, commit=False)
     items = MealPlanItem.query.filter_by(mealplan_id=plan.id).all()
 
     grid = {}
@@ -54,6 +63,13 @@ def planner():
 
     pantry = PantryItem.query.filter_by(user_id=current_user.id).all()
 
+    today_week = _monday_of_week()
+    prev_week = (week_start - timedelta(days=7)).isoformat()
+    next_week = (week_start + timedelta(days=7)).isoformat()
+    is_current_week = (week_start == today_week)
+
+    week_end = week_start + timedelta(days=6)
+
     return render_template(
         'planner/planner.html',
         plan=plan,
@@ -62,6 +78,11 @@ def planner():
         meal_types=MEAL_TYPES,
         recipes=recipes,
         pantry=pantry,
+        week_start=week_start,
+        week_end=week_end,
+        prev_week=prev_week,
+        next_week=next_week,
+        is_current_week=is_current_week,
     )
 
 
@@ -83,7 +104,15 @@ def planner_save():
     if not isinstance(custom_text, str):
         return jsonify(success=False, error='custom_text must be text'), 400
 
-    plan = _get_or_create_plan(current_user.id)
+    week_start = None
+    week_str = data.get('week_start')
+    if week_str:
+        try:
+            week_start = _monday_of_week(date.fromisoformat(week_str))
+        except ValueError:
+            pass
+
+    plan = _get_or_create_plan(current_user.id, week_start=week_start)
     item = MealPlanItem.query.filter_by(
         mealplan_id=plan.id, day_of_week=day, meal_type=meal_type
     ).first()
@@ -167,7 +196,15 @@ def grocery_list():
     range_type = request.args.get('range', 'week')
     days_param = request.args.get('days', '')
 
-    plan = _get_or_create_plan(current_user.id)
+    week_start = None
+    week_str = request.args.get('week_start')
+    if week_str:
+        try:
+            week_start = _monday_of_week(date.fromisoformat(week_str))
+        except ValueError:
+            pass
+
+    plan = _get_or_create_plan(current_user.id, week_start=week_start)
     query = MealPlanItem.query.filter_by(mealplan_id=plan.id)
 
     if range_type == 'day':

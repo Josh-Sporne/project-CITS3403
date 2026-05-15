@@ -34,7 +34,7 @@
 <!-- Title & Meta -->
 <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
     <div>
-        <h1 class="fw-800 mb-2 d-flex flex-wrap align-items-center gap-2">{{ recipe.title }}
+        <h1 class="fw-800 mb-2 d-flex flex-wrap align-items-center gap-2 recipe-detail-title">{{ recipe.title }}
             {% if recipe.is_ai_generated %}
             <span class="badge badge-ai">AI generated</span>
             {% endif %}
@@ -181,7 +181,8 @@
         {% for c in comments %}
         <div class="review">
             <strong><a href="{{ url_for('auth.public_profile', username=c.author.username) }}" class="text-decoration-none" style="color:var(--pt-text);">@{{ c.author.username }}</a></strong>
-            <span class="text-muted-custom small ms-2">{{ c.created_at.strftime('%b %d, %Y') if c.created_at else '' }}</span>
+            <span class="text-muted-custom small ms-2"
+                  data-timestamp="{{ c.created_at.isoformat() if c.created_at else '' }}">{{ c.created_at.strftime('%b %d, %Y') if c.created_at else '' }}</span>
             <p class="mb-0 mt-1">{{ c.body }}</p>
         </div>
         {% endfor %}

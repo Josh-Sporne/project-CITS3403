@@ -4,35 +4,72 @@
 
 {% block content %}
 <!-- Hero -->
-<section class="pt-panel text-center mb-4">
-    <div class="mb-3">
-        <span class="brand-icon-sm d-inline-flex mb-3" style="width:56px;height:56px;font-size:1.5rem;">⌁</span>
+<section class="pt-hero mb-5">
+    <div class="pt-hero-text">
+        <p class="pt-hero-eyebrow">Community Recipe Platform</p>
+        <h1 class="pt-hero-h1" id="pt-hero-h1">
+            Cook with<br><span class="pt-hero-accent">intention.</span>
+        </h1>
+        <p class="pt-hero-sub" id="pt-hero-sub">
+            Plan meals, discover recipes, and get personalised suggestions from your pantry — all in one place.
+        </p>
+        <div class="pt-hero-btns" id="pt-hero-btns">
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('recipes.create') }}" class="btn btn-mint">
+                    <i class="bi bi-plus-circle me-1"></i> Create Recipe
+                </a>
+                <a href="{{ url_for('planner.planner') }}" class="btn btn-outline-light">
+                    <i class="bi bi-calendar-week me-1"></i> Plan This Week
+                </a>
+                <a href="{{ url_for('ai.pantry') }}" class="btn btn-outline-mint">
+                    <i class="bi bi-stars me-1"></i> Try Pantry AI
+                </a>
+            {% else %}
+                <a href="{{ url_for('auth.register') }}" class="btn btn-mint">
+                    <i class="bi bi-person-plus me-1"></i> Sign Up Free
+                </a>
+                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light">
+                    <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
+                </a>
+                <a href="{{ url_for('recipes.discover') }}" class="btn btn-outline-mint">
+                    <i class="bi bi-search me-1"></i> Browse Recipes
+                </a>
+            {% endif %}
+        </div>
     </div>
-    <h1 class="fw-800 mb-2" style="font-size:2.2rem;">Plate Theory</h1>
-    <p class="text-muted-custom mb-4" style="font-size:1.05rem;">
-        Plan meals. Discover recipes. Eat better.
-    </p>
-    <div class="d-flex flex-wrap justify-content-center gap-2">
-        {% if current_user.is_authenticated %}
-            <a href="{{ url_for('recipes.create') }}" class="btn btn-mint">
-                <i class="bi bi-plus-circle me-1"></i> Create Recipe
-            </a>
-            <a href="{{ url_for('planner.planner') }}" class="btn btn-outline-light">
-                <i class="bi bi-calendar-week me-1"></i> Plan This Week
-            </a>
-            <a href="{{ url_for('ai.pantry') }}" class="btn btn-outline-mint">
-                <i class="bi bi-stars me-1"></i> Try Pantry AI
-            </a>
+
+    <!-- Tilted hero card — shows first trending recipe -->
+    <div class="pt-hero-visual" id="pt-hero-visual">
+        {% set hero_recipe = trending_recipes[0] if trending_recipes else none %}
+        {% if hero_recipe %}
+        {% if hero_recipe.image_filename %}
+            {% set hero_card_src = hero_recipe.image_filename if hero_recipe.image_filename.startswith('http')
+                                  else url_for('static', filename='uploads/' + hero_recipe.image_filename) %}
         {% else %}
-            <a href="{{ url_for('auth.register') }}" class="btn btn-mint">
-                <i class="bi bi-person-plus me-1"></i> Sign Up Free
-            </a>
-            <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light">
-                <i class="bi bi-box-arrow-in-right me-1"></i> Sign In
-            </a>
-            <a href="{{ url_for('recipes.discover') }}" class="btn btn-outline-mint">
-                <i class="bi bi-search me-1"></i> Browse Recipes
-            </a>
+            {% set hero_card_src = 'https://loremflickr.com/1200/800/' ~ hero_recipe.slug|replace('-', ',') ~ ',food?lock=' ~ hero_recipe.id %}
+        {% endif %}
+        <a href="/recipe/{{ hero_recipe.slug }}" class="pt-hero-card" style="text-decoration:none;">
+            <div class="pt-hero-card-img">
+                <img src="{{ hero_card_src }}" alt="{{ hero_recipe.title }}">
+            </div>
+            <div class="pt-hero-card-body">
+                <p class="pt-hero-card-label">
+                    <span>{{ hero_recipe.category|capitalize if hero_recipe.category else 'Featured' }}</span>
+                    <span>{{ hero_recipe.cooking_time or 30 }} min</span>
+                </p>
+                <h3 class="pt-hero-card-title">{{ hero_recipe.title }}</h3>
+                <p class="pt-hero-card-meta">by {{ hero_recipe.creator.username if hero_recipe.creator else 'Plate Theory' }}</p>
+            </div>
+        </a>
+        {% else %}
+        <div class="pt-hero-card pt-hero-card--empty">
+            <div class="pt-hero-card-img" style="background:linear-gradient(135deg,var(--pt-violet),var(--pt-coral));"></div>
+            <div class="pt-hero-card-body">
+                <p class="pt-hero-card-label"><span>Community</span></p>
+                <h3 class="pt-hero-card-title">Your first recipe awaits</h3>
+                <p class="pt-hero-card-meta">Start cooking →</p>
+            </div>
+        </div>
         {% endif %}
     </div>
 </section>
@@ -70,4 +107,19 @@
         {% endif %}
     </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        ['pt-hero-h1', 'pt-hero-sub', 'pt-hero-btns', 'pt-hero-visual'].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (el) el.classList.add('pt-hero-in');
+        });
+      });
+    });
+  });
+</script>
 {% endblock %}

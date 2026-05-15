@@ -10,6 +10,27 @@
     </div>
 </div>
 
+<!-- Week navigation -->
+<div class="d-flex align-items-center gap-2 mb-3">
+    <a href="{{ url_for('planner.planner', week=prev_week) }}" class="btn btn-sm btn-outline-light" aria-label="Previous week">
+        <i class="bi bi-chevron-left"></i>
+    </a>
+    <span class="fw-bold text-center" style="min-width:200px;">
+        {{ week_start.strftime('%b %d') }} – {{ week_end.strftime('%b %d, %Y') }}
+        {% if is_current_week %}
+        <span class="badge ms-1" style="background:var(--pt-mint);color:var(--pt-bg);font-size:.6rem;">This Week</span>
+        {% endif %}
+    </span>
+    <a href="{{ url_for('planner.planner', week=next_week) }}" class="btn btn-sm btn-outline-light" aria-label="Next week">
+        <i class="bi bi-chevron-right"></i>
+    </a>
+    {% if not is_current_week %}
+    <a href="{{ url_for('planner.planner') }}" class="btn btn-sm btn-outline-mint ms-1">Today</a>
+    {% endif %}
+</div>
+
+<input type="hidden" id="plannerWeekStart" value="{{ week_start.isoformat() }}">
+
 <div class="planner-grid mb-4" id="plannerGrid">
     {% for day_idx in range(7) %}
     <div class="day-slot" data-day="{{ day_idx }}">
