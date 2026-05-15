@@ -28,6 +28,13 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    # Fail fast if SECRET_KEY isn't set — never run with a placeholder secret.
+    if not app.config.get('SECRET_KEY'):
+        raise RuntimeError(
+            "SECRET_KEY environment variable must be set. "
+            "Copy .env.example to .env and fill in SECRET_KEY (any random string)."
+        )
+
     db.init_app(app)
     login_manager.init_app(app)
     migrate.init_app(app, db)
