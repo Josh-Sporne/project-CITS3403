@@ -5,7 +5,7 @@
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-12" style="max-width: 520px;">
-    <div class="card bg-dark border-secondary shadow">
+    <div class="card pt-panel shadow">
       <div class="card-body p-4">
         <h2 class="card-title text-center mb-4">
           <i class="bi bi-person-plus"></i> Create Account
@@ -16,7 +16,7 @@
 
           <div class="mb-3">
             {{ form.username.label(class="form-label") }}
-            {{ form.username(class="form-control text-light", placeholder="Choose a username") }}
+            {{ form.username(class="form-control", placeholder="Choose a username") }}
             {% for error in form.username.errors %}
               <div class="text-danger small mt-1">{{ error }}</div>
             {% endfor %}
@@ -24,7 +24,7 @@
 
           <div class="mb-3">
             {{ form.email.label(class="form-label") }}
-            {{ form.email(class="form-control text-light", placeholder="you@example.com") }}
+            {{ form.email(class="form-control", placeholder="you@example.com") }}
             {% for error in form.email.errors %}
               <div class="text-danger small mt-1">{{ error }}</div>
             {% endfor %}
@@ -32,7 +32,7 @@
 
           <div class="mb-3">
             {{ form.password.label(class="form-label") }}
-            {{ form.password(class="form-control text-light", placeholder="Minimum 8 characters") }}
+            {{ form.password(class="form-control", placeholder="Minimum 8 characters") }}
             {% for error in form.password.errors %}
               <div class="text-danger small mt-1">{{ error }}</div>
             {% endfor %}
@@ -40,7 +40,7 @@
 
           <div class="mb-3">
             {{ form.confirm_password.label(class="form-label") }}
-            {{ form.confirm_password(class="form-control text-light", placeholder="Re-enter password") }}
+            {{ form.confirm_password(class="form-control", placeholder="Re-enter password") }}
             {% for error in form.confirm_password.errors %}
               <div class="text-danger small mt-1">{{ error }}</div>
             {% endfor %}
