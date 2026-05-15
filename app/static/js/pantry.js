@@ -165,10 +165,21 @@
             matches.forEach(m => {
                 const color = m.match_pct >= 75 ? 'var(--pt-mint)' :
                     m.match_pct >= 40 ? 'var(--pt-sun)' : 'var(--pt-coral)';
+                // Image fallback: real upload OR Wikimedia URL OR Loremflickr food photo
+                const slugTags = (m.slug || '').replace(/-/g, ',');
+                let imgSrc;
+                if (m.image_filename) {
+                    imgSrc = m.image_filename.startsWith('http')
+                        ? m.image_filename
+                        : '/static/uploads/' + escapeHtml(m.image_filename);
+                } else {
+                    imgSrc = `https://loremflickr.com/600/400/${slugTags},food?lock=${m.recipe_id}`;
+                }
                 html += `
                 <div class="col-sm-6 col-lg-4">
                     <div class="pt-card h-100">
-                        <div class="img-ph" style="height:60px"></div>
+                        <img src="${imgSrc}" alt="${escapeHtml(m.title)}"
+                             style="width:100%;height:120px;object-fit:cover;border-radius:12px;margin-bottom:0.5rem;">
                         <h3>${m.slug ? '<a href="/recipe/' + escapeHtml(m.slug) + '">' + escapeHtml(m.title) + '</a>' : escapeHtml(m.title)}</h3>
                         <div class="d-flex justify-content-between align-items-center" style="font-size:.72rem">
                             <span class="text-muted-custom"><i class="bi bi-clock"></i> ${m.cooking_time || '—'} min</span>
@@ -196,10 +207,16 @@
                 const title = escapeHtml(s.title || 'Untitled');
                 const instr = escapeHtml(s.instructions || '');
                 const ingList = (s.ingredients || []).map(ingredientChipHtml).join('');
+                // AI suggestions don't have a saved image yet — use Loremflickr
+                // keyed off the suggestion's title so the same suggestion is
+                // visually consistent across re-renders.
+                const titleSlug = (s.title || 'food').toLowerCase().replace(/[^a-z0-9]+/g, ',').replace(/^,|,$/g, '');
+                const imgSrc = `https://loremflickr.com/600/400/${titleSlug || 'food'},food?lock=${idx}`;
                 html += `
                 <div class="col-sm-6 col-lg-4">
                     <div class="pt-card h-100 pantry-ai-card d-flex flex-column" data-ai-index="${idx}">
-                        <div class="img-ph" style="height:48px"></div>
+                        <img src="${imgSrc}" alt="${title}"
+                             style="width:100%;height:120px;object-fit:cover;border-radius:12px;margin-bottom:0.5rem;">
                         <h3 style="font-size:1rem">${title}</h3>
                         <div class="text-muted-custom flex-grow-1" style="font-size:.78rem;white-space:pre-wrap;min-height:4rem">${instr}</div>
                         <div class="d-flex flex-wrap gap-1 mt-2 mb-3">${ingList}</div>

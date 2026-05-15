@@ -3,6 +3,7 @@ from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, PasswordField, BooleanField, TextAreaField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, Optional, Regexp
 
+from flask_login import current_user
 from sqlalchemy import func
 
 from app.models import User
@@ -58,10 +59,25 @@ class EditProfileForm(FlaskForm):
     image = FileField('Profile Picture', validators=[Optional(), FileAllowed(['jpg', 'jpeg', 'png', 'gif', 'webp'])])
     submit = SubmitField('Save Changes')
     def validate_new_username(self, field):
-        if User.query.filter_by(username=field.data).first():
+        # Skip if user left the field blank (Optional() means no change requested).
+        value = (field.data or '').strip().lower()
+        if not value:
+            return
+        existing = User.query.filter(
+            func.lower(User.username) == value,
+            User.id != current_user.id,    # exclude self — re-submitting own name is fine
+        ).first()
+        if existing:
             raise ValidationError('already taken.')
 
     def validate_new_email(self, field):
-        if User.query.filter_by(email=field.data).first():
+        value = (field.data or '').strip().lower()
+        if not value:
+            return
+        existing = User.query.filter(
+            func.lower(User.email) == value,
+            User.id != current_user.id,
+        ).first()
+        if existing:
             raise ValidationError('already registered.')
         

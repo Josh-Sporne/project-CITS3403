@@ -5,7 +5,7 @@
 {% block content %}
 <div class="row justify-content-center">
   <div class="col-12" style="max-width: 420px;">
-    <div class="card bg-dark border-secondary shadow">
+    <div class="card pt-panel shadow">
       <div class="card-body p-4">
         <h2 class="card-title text-center mb-4">
           <i class="bi bi-box-arrow-in-right"></i> Sign In
@@ -16,7 +16,7 @@
 
           <div class="mb-3">
             {{ form.username.label(class="form-label") }}
-            {{ form.username(class="form-control text-light", placeholder="Your username") }}
+            {{ form.username(class="form-control", placeholder="Your username") }}
             {% for error in form.username.errors %}
               <div class="text-danger small mt-1">{{ error }}</div>
             {% endfor %}
@@ -24,7 +24,7 @@
 
           <div class="mb-3">
             {{ form.password.label(class="form-label") }}
-            {{ form.password(class="form-control text-light", placeholder="Password") }}
+            {{ form.password(class="form-control", placeholder="Password") }}
             {% for error in form.password.errors %}
               <div class="text-danger small mt-1">{{ error }}</div>
             {% endfor %}
