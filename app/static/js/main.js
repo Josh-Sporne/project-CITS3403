@@ -270,23 +270,131 @@ function initNavbarScroll() {
 })();
 
 /* ─────────────────────────────────────────────
-   HERO WORD-BY-WORD REVEAL
+   AUTO HEADING REVEAL — all h1 + h2 sitewide
+   Preserves icons/non-text children.
+   h1 in viewport → animates on load.
+   h2 + below-fold h1 → animates on scroll.
 ───────────────────────────────────────────── */
-function initHeroReveal() {
-    if (_prefersReducedMotion) return;
-    document.querySelectorAll('[data-word-reveal]').forEach(el => {
-        const words = el.textContent.trim().split(/\s+/);
-        el.innerHTML = words.map((w, i) =>
-            `<span class="word-reveal-wrap"><span class="word-reveal-inner" style="--wi:${i}">${w}</span></span>`
-        ).join(' ');
-        // Double rAF: first frame paints the hidden state,
-        // second frame triggers the transition to visible state.
-        requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-                el.classList.add('words-ready');
+function _splitHeading(el) {
+    if (el.dataset.wordReady) return; // already processed
+
+    const isGradient = el.classList.contains('gradient-text');
+    if (isGradient) el.classList.remove('gradient-text');
+
+    let wordIdx = 0;
+    let html = '';
+
+    // Walk child nodes: preserve element nodes (icons), split text nodes
+    el.childNodes.forEach(node => {
+        if (node.nodeType === 3) { // text node
+            const words = node.textContent.trim().split(/\s+/).filter(Boolean);
+            words.forEach(w => {
+                const cls = 'word-reveal-inner' + (isGradient ? ' gradient-text' : '');
+                html += `<span class="word-reveal-wrap"><span class="${cls}" style="--wi:${wordIdx++}">${w}</span></span> `;
             });
+        } else if (node.nodeType === 1) { // element (icon etc) — pass through untouched
+            html += node.outerHTML + ' ';
+        }
+    });
+
+    el.innerHTML = html.trim();
+    el.dataset.wordReady = '1';
+}
+
+function _triggerWordReveal(el) {
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            el.classList.add('words-ready');
         });
     });
+}
+
+function initHeadingReveal() {
+    if (_prefersReducedMotion) return;
+
+    const headings = Array.from(
+        document.querySelectorAll('h1, h2')
+    ).filter(el => !el.closest('header, nav, footer, .modal, .btn, button'));
+
+    if (!headings.length) return;
+
+    // Split all headings into word spans up-front
+    headings.forEach(_splitHeading);
+
+    const vh = window.innerHeight;
+    const belowFold = [];
+
+    headings.forEach(el => {
+        const top = el.getBoundingClientRect().top;
+        if (el.tagName === 'H1' && top < vh - 20) {
+            // h1 in viewport on load — fire immediately
+            _triggerWordReveal(el);
+        } else {
+            // h2 or below-fold h1 — fire on scroll
+            belowFold.push(el);
+        }
+    });
+
+    if (!belowFold.length) return;
+
+    const headingObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            _triggerWordReveal(entry.target);
+            headingObserver.unobserve(entry.target);
+        });
+    }, { threshold: 0.25, rootMargin: '0px 0px -30px 0px' });
+
+    belowFold.forEach(el => headingObserver.observe(el));
+}
+
+/* ─────────────────────────────────────────────
+   COUNT-UP — .stat-number animates 0 → value
+   on scroll. Handles integers and decimals.
+───────────────────────────────────────────── */
+function initCountUp() {
+    if (_prefersReducedMotion) return;
+
+    const els = document.querySelectorAll('.stat-number');
+    if (!els.length) return;
+
+    // easeOutQuart
+    const ease = t => 1 - Math.pow(1 - t, 4);
+
+    function animate(el) {
+        const raw = el.dataset.countTarget || '';
+        const target = parseFloat(raw);
+        if (isNaN(target) || target === 0) return;
+
+        const decimals = raw.includes('.') ? (raw.split('.')[1] || '').length : 0;
+        const duration = 850;
+        const startTime = performance.now();
+
+        el.textContent = decimals ? '0.' + '0'.repeat(decimals) : '0';
+
+        function tick(now) {
+            const p = Math.min((now - startTime) / duration, 1);
+            const v = target * ease(p);
+            el.textContent = decimals ? v.toFixed(decimals) : Math.round(v);
+            if (p < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+    }
+
+    // Store target values before observer changes textContent
+    els.forEach(el => {
+        el.dataset.countTarget = el.textContent.trim();
+    });
+
+    const countObs = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            animate(entry.target);
+            countObs.unobserve(entry.target);
+        });
+    }, { threshold: 0.6 });
+
+    els.forEach(el => countObs.observe(el));
 }
 
 /* ─────────────────────────────────────────────
@@ -304,6 +412,7 @@ document.addEventListener('DOMContentLoaded', () => {
     autoDismissAlerts();
     initScrollReveal();
     initNavbarScroll();
-    initHeroReveal();
+    initHeadingReveal();
+    initCountUp();
     initGroceryCheck();
 });

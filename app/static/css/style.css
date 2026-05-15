@@ -2036,22 +2036,22 @@ header {
   display: inline-block;
   overflow: hidden;
   vertical-align: bottom;
-  padding-bottom: 0.05em;
+  line-height: 1.15;
+  padding-bottom: 0.08em; /* prevents descenders from clipping */
 }
 .word-reveal-inner {
   display: inline-block;
-  transform: translateY(110%);
-  opacity: 0;
-  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
-              opacity   0.6s ease;
-  transition-delay: calc(var(--wi, 0) * 80ms + 120ms);
+  transform: translateY(105%);
+  transition: transform 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+  /* 65ms per word, 80ms base — snappy on short headings, legible on long */
+  transition-delay: calc(var(--wi, 0) * 65ms + 80ms);
+  will-change: transform;
 }
 .words-ready .word-reveal-inner {
   transform: none;
-  opacity: 1;
 }
 @media (prefers-reduced-motion: reduce) {
-  .word-reveal-inner { transform: none; opacity: 1; transition: none; }
+  .word-reveal-inner { transform: none !important; transition: none !important; }
 }
 
 /* ─────────────────────────────────────────────
