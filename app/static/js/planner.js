@@ -149,12 +149,27 @@
             });
     });
 
-    /* --- Recipe search filter --- */
+    /* --- Recipe search filter ---
+     * NOTE: option.hidden = true is ignored by Chrome/Edge on <select> options,
+     * so the original implementation looked correct but did nothing. Instead
+     * we cache the full option list once and rebuild on each keystroke.
+     */
+    const recipeSelectEl = document.getElementById('recipeSelect');
+    const allRecipeOptions = Array.from(recipeSelectEl.querySelectorAll('option'))
+        .filter(o => o.value)
+        .map(o => ({ value: o.value, text: o.textContent }));
+
     document.getElementById('recipeSearch').addEventListener('input', function () {
-        const q = this.value.toLowerCase();
-        document.querySelectorAll('#recipeSelect option').forEach(function (opt) {
-            if (!opt.value) return;
-            opt.hidden = !opt.textContent.toLowerCase().includes(q);
+        const q = this.value.toLowerCase().trim();
+        // Keep the placeholder option, then re-append matching recipe options.
+        recipeSelectEl.innerHTML = '<option value="">— Select recipe —</option>';
+        allRecipeOptions.forEach(function (data) {
+            if (!q || data.text.toLowerCase().includes(q)) {
+                const opt = document.createElement('option');
+                opt.value = data.value;
+                opt.textContent = data.text;
+                recipeSelectEl.appendChild(opt);
+            }
         });
     });
 

@@ -457,6 +457,42 @@ def comment(slug):
     )
 
 
+@bp.route('/comment/<int:comment_id>/edit', methods=['POST'])
+@login_required
+def edit_comment(comment_id):
+    """Edit own comment. Body is the new text. Same validation as posting."""
+    c = Comment.query.get_or_404(comment_id)
+    if c.user_id != current_user.id:
+        return jsonify(success=False, error='Not your comment'), 403
+
+    data = json_body()
+    body = data.get('body')
+    if not isinstance(body, str):
+        return jsonify(success=False, error='Comment body must be text'), 400
+    body = body.strip()
+    if not body:
+        return jsonify(success=False, error='Comment cannot be empty'), 400
+    if len(body) > 2000:
+        return jsonify(success=False, error='Comment too long (max 2000 chars)'), 400
+
+    c.body = body
+    db.session.commit()
+    return jsonify(success=True, comment={'id': c.id, 'body': c.body})
+
+
+@bp.route('/comment/<int:comment_id>/delete', methods=['POST'])
+@login_required
+def delete_comment(comment_id):
+    """Delete own comment."""
+    c = Comment.query.get_or_404(comment_id)
+    if c.user_id != current_user.id:
+        return jsonify(success=False, error='Not your comment'), 403
+
+    db.session.delete(c)
+    db.session.commit()
+    return jsonify(success=True)
+
+
 @bp.route('/api/recipe/<slug>/visibility', methods=['POST'])
 @login_required
 def recipe_visibility(slug):

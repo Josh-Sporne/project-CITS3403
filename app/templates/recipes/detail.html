@@ -181,11 +181,33 @@
 
     <div id="comments-list">
         {% for c in comments %}
-        <div class="review">
-            <strong><a href="{{ url_for('auth.public_profile', username=c.author.username) }}" class="text-decoration-none" style="color:var(--pt-text);">@{{ c.author.username }}</a></strong>
-            <span class="text-muted-custom small ms-2"
-                  data-timestamp="{{ c.created_at.isoformat() if c.created_at else '' }}">{{ c.created_at.strftime('%b %d, %Y') if c.created_at else '' }}</span>
-            <p class="mb-0 mt-1">{{ c.body }}</p>
+        <div class="review" data-comment-id="{{ c.id }}">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <strong><a href="{{ url_for('auth.public_profile', username=c.author.username) }}" class="text-decoration-none" style="color:var(--pt-text);">@{{ c.author.username }}</a></strong>
+                    <span class="text-muted-custom small ms-2"
+                          data-timestamp="{{ c.created_at.isoformat() if c.created_at else '' }}">{{ c.created_at.strftime('%b %d, %Y') if c.created_at else '' }}</span>
+                </div>
+                {% if current_user.is_authenticated and current_user.id == c.user_id %}
+                <div class="btn-group btn-group-sm" role="group" aria-label="Comment actions">
+                    <button type="button" class="btn btn-sm btn-outline-light comment-edit-btn"
+                            style="font-size:.65rem;padding:.1rem .4rem;" aria-label="Edit comment">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-coral comment-delete-btn"
+                            style="font-size:.65rem;padding:.1rem .4rem;" aria-label="Delete comment">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+            <p class="mb-0 mt-1 comment-body">{{ c.body }}</p>
+            <!-- Inline edit form, hidden by default -->
+            <div class="comment-edit-form mt-2" hidden>
+                <textarea class="form-control form-control-sm mb-2" maxlength="2000" rows="2"></textarea>
+                <button type="button" class="btn btn-sm btn-mint comment-edit-save">Save</button>
+                <button type="button" class="btn btn-sm btn-outline-light comment-edit-cancel">Cancel</button>
+            </div>
         </div>
         {% endfor %}
         {% if not comments %}
@@ -582,6 +604,90 @@
                 btn.innerHTML = originalHtml;
                 if (window.showErrorToast) window.showErrorToast('Could not add to meal plan');
             });
+        });
+    });
+
+    /* Comment edit + delete — event-delegated on the comments list so it works
+       for both server-rendered comments and JS-rendered ones (newly posted in this session). */
+    const commentsListEl = document.getElementById('comments-list');
+    if (commentsListEl) {
+        commentsListEl.addEventListener('click', function (e) {
+            const review = e.target.closest('.review');
+            if (!review) return;
+            const commentId = review.dataset.commentId;
+            if (!commentId) return;
+
+            // EDIT — show inline form prefilled with current body
+            if (e.target.closest('.comment-edit-btn')) {
+                const body = review.querySelector('.comment-body');
+                const form = review.querySelector('.comment-edit-form');
+                const textarea = form.querySelector('textarea');
+                textarea.value = body.textContent;
+                body.hidden = true;
+                form.hidden = false;
+                textarea.focus();
+                return;
+            }
+
+            // CANCEL — hide form, restore body
+            if (e.target.closest('.comment-edit-cancel')) {
+                review.querySelector('.comment-body').hidden = false;
+                review.querySelector('.comment-edit-form').hidden = true;
+                return;
+            }
+
+            // SAVE edit — POST to /comment/<id>/edit
+            if (e.target.closest('.comment-edit-save')) {
+                const saveBtn = e.target.closest('.comment-edit-save');
+                const textarea = review.querySelector('.comment-edit-form textarea');
+                const newBody = textarea.value.trim();
+                if (!newBody) return;
+                saveBtn.disabled = true;
+                fetch(`/comment/${commentId}/edit`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+                    body: JSON.stringify({body: newBody}),
+                })
+                .then(r => r.json())
+                .then(data => {
+                    saveBtn.disabled = false;
+                    if (data.success) {
+                        review.querySelector('.comment-body').textContent = data.comment.body;
+                        review.querySelector('.comment-body').hidden = false;
+                        review.querySelector('.comment-edit-form').hidden = true;
+                        if (window.showToast) window.showToast('Comment updated');
+                    } else if (window.showErrorToast) {
+                        window.showErrorToast(data.error || 'Could not update comment');
+                    }
+                })
+                .catch(() => {
+                    saveBtn.disabled = false;
+                    if (window.showErrorToast) window.showErrorToast('Could not update comment');
+                });
+                return;
+            }
+
+            // DELETE — confirm + POST to /comment/<id>/delete
+            if (e.target.closest('.comment-delete-btn')) {
+                if (!confirm('Delete this comment? This cannot be undone.')) return;
+                fetch(`/comment/${commentId}/delete`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        review.remove();
+                        if (window.showToast) window.showToast('Comment deleted');
+                    } else if (window.showErrorToast) {
+                        window.showErrorToast(data.error || 'Could not delete comment');
+                    }
+                })
+                .catch(() => {
+                    if (window.showErrorToast) window.showErrorToast('Could not delete comment');
+                });
+                return;
+            }
         });
     }
 })();
