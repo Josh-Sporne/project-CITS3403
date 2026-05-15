@@ -34,7 +34,7 @@ def get_pantry_matches(user_id, max_time=None):
 
     results = []
     for recipe in recipes:
-        ingredients = recipe.ingredients
+        ingredients = recipe.ingredients.all()
         total = len(ingredients)
         if total == 0:
             continue
@@ -136,7 +136,7 @@ def get_ai_suggestions(ingredients, preferences, api_key):
     try:
         import openai
 
-        client = openai.OpenAI(api_key=api_key)
+        client = openai.OpenAI(api_key=api_key, timeout=20.0)
         prompt = (
             "You are a creative chef. Given these ingredients: "
             f"{', '.join(ingredients)}. "
@@ -153,6 +153,7 @@ def get_ai_suggestions(ingredients, preferences, api_key):
             messages=[{'role': 'user', 'content': prompt}],
             temperature=0.7,
             max_tokens=1200,
+            timeout=20.0,
         )
 
         text = response.choices[0].message.content.strip()

@@ -35,22 +35,72 @@
         if (removeBtn) {
             const itemId = removeBtn.dataset.itemId;
             if (!itemId) return;
-            fetch('/api/planner/remove', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': CSRF,
-                },
-                body: JSON.stringify({ item_id: parseInt(itemId, 10) }),
-            })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) safeReload();
-                })
-                .catch(() => {
-                    showErrorToast('Could not remove meal. Please try again.');
-                });
+            // Open the styled confirmation modal — actual delete happens on
+            // the modal's Confirm button (see handler below).
+            openRemoveConfirm(removeBtn, itemId);
         }
+    });
+
+    /* --- Styled confirmation modal for "Remove meal" --- */
+    const confirmRemoveModalEl = document.getElementById('confirmRemoveModal');
+    const confirmRemoveModal = confirmRemoveModalEl ? new bootstrap.Modal(confirmRemoveModalEl) : null;
+    let pendingRemove = null;   // { btn, itemId }
+
+    function openRemoveConfirm(btn, itemId) {
+        pendingRemove = { btn, itemId };
+        // Try to show a friendly label (recipe title or custom text) of what's being removed.
+        const slot = btn.closest('.slot');
+        const content = slot ? slot.querySelector('.slot-content') : null;
+        const labelEl = document.getElementById('confirmRemoveLabel');
+        if (labelEl) labelEl.textContent = content ? content.textContent.trim() : 'this meal';
+        if (confirmRemoveModal) confirmRemoveModal.show();
+    }
+
+    document.getElementById('confirmRemoveBtn')?.addEventListener('click', function () {
+        if (!pendingRemove) return;
+        const { btn, itemId } = pendingRemove;
+        const confirmBtn = this;
+
+        // Disable both buttons + show in-flight state
+        btn.disabled = true;
+        confirmBtn.disabled = true;
+        const originalConfirmHtml = confirmBtn.innerHTML;
+        confirmBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Removing…';
+
+        fetch('/api/planner/remove', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': CSRF,
+            },
+            body: JSON.stringify({ item_id: parseInt(itemId, 10) }),
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    if (window.showToast) window.showToast('Meal removed');
+                    // Hide modal first, then reload after fade-out finishes.
+                    confirmRemoveModalEl.addEventListener('hidden.bs.modal', () => location.reload(), { once: true });
+                    confirmRemoveModal.hide();
+                } else {
+                    btn.disabled = false;
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = originalConfirmHtml;
+                    if (window.showErrorToast) window.showErrorToast(data.error || 'Could not remove meal');
+                }
+            })
+            .catch(() => {
+                btn.disabled = false;
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = originalConfirmHtml;
+                if (window.showErrorToast) window.showErrorToast('Could not remove meal. Please try again.');
+            });
+    });
+
+    // Reset pending state when modal closes (Cancel, Esc, backdrop click)
+    confirmRemoveModalEl?.addEventListener('hidden.bs.modal', () => {
+        if (pendingRemove && pendingRemove.btn) pendingRemove.btn.disabled = false;
+        pendingRemove = null;
     });
 
     /* --- Save assignment --- */
@@ -72,6 +122,9 @@
         } else {
             payload.custom_text = customText;
         }
+
+        const weekStart = document.getElementById('plannerWeekStart')?.value;
+        if (weekStart) payload.week_start = weekStart;
 
         fetch('/api/planner/save', {
             method: 'POST',
@@ -130,7 +183,10 @@
         if (!el) return;
         el.innerHTML = '<p class="text-muted-custom" style="font-size:.82rem">Loading…</p>';
 
-        fetch('/api/grocery-list?range=' + currentRange, {
+        const weekStartVal = document.getElementById('plannerWeekStart')?.value;
+        const groceryUrl = '/api/grocery-list?range=' + currentRange +
+            (weekStartVal ? '&week_start=' + encodeURIComponent(weekStartVal) : '');
+        fetch(groceryUrl, {
             headers: { 'X-CSRFToken': CSRF },
         })
             .then(r => r.json())

@@ -28,10 +28,12 @@
         if (getIngredients().some(n => n.toLowerCase() === name.toLowerCase())) return;
 
         const span = document.createElement('span');
-        span.className = 'chip pantry-chip';
+        span.className = 'chip pantry-chip chip-enter';
         span.dataset.name = name;
         span.innerHTML = `${name} <button type="button" class="btn-close btn-close-white ms-1" style="font-size:.5rem;vertical-align:middle" aria-label="Remove"></button>`;
         chipsContainer.appendChild(span);
+        // Remove animation class after it plays so re-adds don't re-trigger
+        span.addEventListener('animationend', () => span.classList.remove('chip-enter'), { once: true });
     }
 
     function removeChip(chip) {
@@ -49,6 +51,11 @@
     document.getElementById('addIngredientBtn').addEventListener('click', function () {
         addChip(ingredientInput.value);
         ingredientInput.value = '';
+        ingredientInput.focus();
+    });
+
+    document.getElementById('clearPantryBtn').addEventListener('click', function () {
+        chipsContainer.querySelectorAll('.pantry-chip').forEach(c => c.remove());
         ingredientInput.focus();
     });
 
@@ -98,12 +105,17 @@
         spinner.classList.remove('d-none');
         resultsContainer.innerHTML = '';
 
+        const controller = new AbortController();
+        const timeoutMs = useAi ? 25000 : 10000;
+        const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
         fetch('/api/ai/suggest', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': CSRF,
             },
+            signal: controller.signal,
             body: JSON.stringify({
                 ingredients: ingredients,
                 preferences: buildPreferences(),
@@ -120,9 +132,15 @@
                 }
                 renderResults(data.matches, data.ai_suggestions);
             })
-            .catch(() => {
+            .catch((err) => {
                 spinner.classList.add('d-none');
-                resultsContainer.innerHTML = '<div class="alert alert-danger">Network error — please try again.</div>';
+                const msg = err && err.name === 'AbortError'
+                    ? (useAi ? 'AI generation timed out — please try again.' : 'Recipe matching timed out — please try again.')
+                    : 'Network error — please try again.';
+                resultsContainer.innerHTML = `<div class="alert alert-danger">${escapeHtml(msg)}</div>`;
+            })
+            .finally(() => {
+                window.clearTimeout(timeoutId);
             });
     }
 
@@ -168,7 +186,7 @@
                             <span class="badge bg-info">${escapeHtml(m.category || '')}</span>
                         </div>
                         <div class="match-bar mt-2">
-                            <div class="match-fill" style="width:${m.match_pct}%;background:${color}"></div>
+                            <div class="match-fill" data-width="${m.match_pct}" style="width:0%;background:${color}"></div>
                         </div>
                         <p style="font-size:.68rem;margin-top:.3rem" class="text-muted-custom mb-0">
                             ${m.matched_ingredients}/${m.total_ingredients} ingredients · <strong style="color:${color}">${m.match_pct}%</strong> match
@@ -215,6 +233,13 @@
         }
 
         resultsContainer.innerHTML = html;
+
+        // Animate match bars after paint
+        requestAnimationFrame(() => {
+            resultsContainer.querySelectorAll('.match-fill[data-width]').forEach(bar => {
+                bar.style.width = bar.dataset.width + '%';
+            });
+        });
     }
 
     resultsContainer.addEventListener('click', function (e) {
@@ -253,6 +278,14 @@
             .then(res => {
                 if (res.ok && res.data.success) {
                     showSaveFeedback(res.data.slug, btn.dataset.vis === 'private');
+                } else if (res.data.slug) {
+                    if (feedbackEl) {
+                        feedbackEl.innerHTML =
+                            '<div class="alert alert-warning mb-0">' +
+                            escapeHtml(res.data.error) +
+                            ' <a href="/recipe/' + encodeURIComponent(res.data.slug) + '">View existing recipe</a>' +
+                            '</div>';
+                    }
                 } else {
                     alert(res.data.error || 'Could not save recipe.');
                 }
