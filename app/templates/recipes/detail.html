@@ -395,11 +395,19 @@
                     const dt = data.comment.created_at ? new Date(data.comment.created_at) : new Date();
                     const dateStr = dt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
 
-                    // Build DOM with createElement/textContent so user-supplied
-                    // strings are NEVER parsed as HTML (XSS safe).
+                    // Build DOM matching server-rendered structure (d-flex header
+                    // with author/date + edit/delete buttons, then body, then
+                    // hidden inline edit form). createElement/textContent so
+                    // user-supplied strings are never parsed as HTML.
                     const div = document.createElement('div');
                     div.className = 'review';
+                    div.dataset.commentId = data.comment.id;   // event delegation uses this
 
+                    // Header row
+                    const header = document.createElement('div');
+                    header.className = 'd-flex justify-content-between align-items-start';
+
+                    const left = document.createElement('div');
                     const strong = document.createElement('strong');
                     const authorLink = document.createElement('a');
                     authorLink.href = '/user/' + encodeURIComponent(data.comment.author);
@@ -407,18 +415,65 @@
                     authorLink.style.color = 'var(--pt-text)';
                     authorLink.textContent = '@' + data.comment.author;
                     strong.appendChild(authorLink);
-
                     const dateSpan = document.createElement('span');
                     dateSpan.className = 'text-muted-custom small ms-2';
                     dateSpan.textContent = dateStr;
+                    left.appendChild(strong);
+                    left.appendChild(dateSpan);
+                    header.appendChild(left);
 
+                    // Edit/Delete button group (always for the just-posted comment — it's yours)
+                    const btnGroup = document.createElement('div');
+                    btnGroup.className = 'btn-group btn-group-sm';
+                    btnGroup.setAttribute('role', 'group');
+                    btnGroup.setAttribute('aria-label', 'Comment actions');
+                    const editBtn = document.createElement('button');
+                    editBtn.type = 'button';
+                    editBtn.className = 'btn btn-sm btn-outline-light comment-edit-btn';
+                    editBtn.style.fontSize = '.65rem';
+                    editBtn.style.padding = '.1rem .4rem';
+                    editBtn.setAttribute('aria-label', 'Edit comment');
+                    editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
+                    const delBtn = document.createElement('button');
+                    delBtn.type = 'button';
+                    delBtn.className = 'btn btn-sm btn-outline-coral comment-delete-btn';
+                    delBtn.style.fontSize = '.65rem';
+                    delBtn.style.padding = '.1rem .4rem';
+                    delBtn.setAttribute('aria-label', 'Delete comment');
+                    delBtn.innerHTML = '<i class="bi bi-trash"></i>';
+                    btnGroup.appendChild(editBtn);
+                    btnGroup.appendChild(delBtn);
+                    header.appendChild(btnGroup);
+
+                    div.appendChild(header);
+
+                    // Body
                     const body = document.createElement('p');
-                    body.className = 'mb-0 mt-1';
+                    body.className = 'mb-0 mt-1 comment-body';
                     body.textContent = data.comment.body;
-
-                    div.appendChild(strong);
-                    div.appendChild(dateSpan);
                     div.appendChild(body);
+
+                    // Hidden inline edit form (will be shown when pencil is clicked)
+                    const editForm = document.createElement('div');
+                    editForm.className = 'comment-edit-form mt-2';
+                    editForm.hidden = true;
+                    const editTextarea = document.createElement('textarea');
+                    editTextarea.className = 'form-control form-control-sm mb-2';
+                    editTextarea.maxLength = 2000;
+                    editTextarea.rows = 2;
+                    const editSave = document.createElement('button');
+                    editSave.type = 'button';
+                    editSave.className = 'btn btn-sm btn-mint comment-edit-save';
+                    editSave.textContent = 'Save';
+                    const editCancel = document.createElement('button');
+                    editCancel.type = 'button';
+                    editCancel.className = 'btn btn-sm btn-outline-light comment-edit-cancel';
+                    editCancel.textContent = 'Cancel';
+                    editForm.appendChild(editTextarea);
+                    editForm.appendChild(editSave);
+                    editForm.appendChild(document.createTextNode(' '));
+                    editForm.appendChild(editCancel);
+                    div.appendChild(editForm);
 
                     commentsList.insertBefore(div, commentsList.firstChild);
                     commentInput.value = '';
@@ -605,7 +660,7 @@
                 if (window.showErrorToast) window.showErrorToast('Could not add to meal plan');
             });
         });
-    });
+    }
 
     /* Comment edit + delete — event-delegated on the comments list so it works
        for both server-rendered comments and JS-rendered ones (newly posted in this session). */

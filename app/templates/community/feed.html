@@ -51,15 +51,18 @@
 
                         <!-- Recipe Preview Card -->
                         <div class="pt-card mt-2">
+                            {% set _img_src = (recipe.image_filename if recipe.image_filename and recipe.image_filename.startswith('http')
+                                              else url_for('static', filename='uploads/' + recipe.image_filename) if recipe.image_filename
+                                              else 'https://loremflickr.com/600/400/' ~ recipe.slug|replace('-', ',') ~ ',food?lock=' ~ recipe.id) %}
+                            {% if recipe.slug %}
+                            <a href="/recipe/{{ recipe.slug }}" class="pt-card-media d-block" aria-label="View {{ recipe.title }}">
+                                <img src="{{ _img_src }}" alt="{{ recipe.title }}">
+                            </a>
+                            {% else %}
                             <div class="pt-card-media">
-                                {% if recipe.image_filename %}
-                                <img src="{{ recipe.image_filename if recipe.image_filename.startswith('http') else url_for('static', filename='uploads/' + recipe.image_filename) }}"
-                                     alt="{{ recipe.title }}">
-                                {% else %}
-                                <img src="https://loremflickr.com/600/400/{{ recipe.slug|replace('-', ',') }},food?lock={{ recipe.id }}"
-                                     alt="{{ recipe.title }}">
-                                {% endif %}
+                                <img src="{{ _img_src }}" alt="{{ recipe.title }}">
                             </div>
+                            {% endif %}
                             <h3>
                                 {% if recipe.slug %}
                                 <a href="/recipe/{{ recipe.slug }}">{{ recipe.title }}</a>
@@ -75,7 +78,9 @@
                                 </span>
                                 {% endif %}
                                 {% if recipe.category %}
-                                <span class="badge bg-info">{{ recipe.category }}</span>
+                                <a href="{{ url_for('recipes.discover') }}?category={{ recipe.category|lower }}"
+                                   class="badge bg-info text-decoration-none"
+                                   title="Filter by {{ recipe.category|capitalize }}">{{ recipe.category|capitalize }}</a>
                                 {% endif %}
                                 {% if recipe.is_ai_generated %}
                                 <span class="badge badge-ai">AI</span>
