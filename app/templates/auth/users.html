@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Search Users — Plate Theory{% endblock %}
+
+{% block content %}
+<section class="pt-panel mb-4">
+    <h2 class="mb-3"><i class="bi bi-search me-2"></i>Users</h2>
+
+    <!-- Search -->
+    <div class="search-bar mb-3">
+        <input type="search" id="search-input" class="form-control" placeholder='Search users'>
+    </div>
+
+    <!-- Count -->
+    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+        <span class="result-count text-muted-custom" id="result-count">
+            Showing {{ users|length }} of {{ total }} users
+        </span>
+    </div>
+</section>
+
+<!-- User Grid -->
+<div class="row g-3" id="user-results">
+    {% for user in users %}
+    <div class="card mb-3 animate-fade col-lg-4 col-md-6 col-sm-6">
+        <div class="card-body d-flex align-items-center mb-3" style="padding-bottom: 0">
+            <img src="{{user.avatar_url}}" class="rounded-circle me-2" width="36">
+            <a href="/user/{{user.username}}" class="me-auto">{{user.username}}</a>
+            {% if current_user.is_authenticated and current_user.id != user.id %}
+            <button class="btn btn-sm btn-mint follow-btn"
+                data-username="{{ user.username }}"
+                data-following="{{ 'true' if current_user.is_following(user) else 'false' }}"
+                onclick="toggleFollow(this.dataset.username, this)">
+                {{ 'Unfollow' if current_user.is_following(user) else 'Follow' }}
+            </button>
+            {% endif %}
+          </div>
+    </div>
+    {% endfor %}
+    {% if not users %}
+    <div class="col-12">
+        <p class="text-muted-custom text-center">No users found.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Load More -->
+<div class="text-center mt-4" id="load-more-wrap">
+    {% if users|length < total %}
+    <button id="load-more-btn" class="btn btn-outline-light">
+        <i class="bi bi-arrow-down-circle me-1"></i> Load More
+    </button>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
+    const grid = document.getElementById('user-results');
+    const countEl = document.getElementById('result-count');
+    const loadMoreWrap = document.getElementById('load-more-wrap');
+    const searchInput = document.getElementById('search-input');
+
+    let currentPage = 1;
+    let currentQuery = '';
+    let totalResults = "{{ total }}";
+
+    function buildCardHtml(u) {
+        const imgBlock = u.avatar_url
+            ? `<img src=" ${u.avatar_url}" alt="${u.username}" class="rounded-circle" width="40" height="40"
+                         style="border:2px solid var(--pt-border)">`
+            : '';
+        return `
+        <article class="pt-card h-100">
+            <div class="img-ph">${imgBlock}</div>
+            <h3><a href="/user/${u.username}" class="text-decoration-none" style="color:var(--pt-text);">${u.username}</a></h3>
+        </article>`;
+    }
+
+    function fetchUsers(append) {
+        const params = new URLSearchParams({
+            q: currentQuery,
+            page: currentPage,
+            per_page: 12,
+        });
+        fetch(`/api/users?${params}`)
+            .then(resp => resp.json())
+            .then(data => {
+                totalResults = data.total;
+                countEl.textContent = `Showing ${append ? grid.children.length + data.users.length : data.users.length} of ${data.total} users`;
+
+                if (!append) grid.innerHTML = '';
+
+                if (data.users.length === 0 && !append) {
+                    grid.innerHTML = '<div class="col-12"><p class="text-muted-custom text-center">No users found.</p></div>';
+                }
+
+                data.users.forEach(u => {
+                    const col = document.createElement('div');
+                    col.className = 'col-lg-3 col-md-4 col-sm-6';
+                    col.innerHTML = buildCardHtml(u);
+                    grid.appendChild(col);
+                });
+
+                loadMoreWrap.innerHTML = data.has_next
+                    ? '<button id="load-more-btn" class="btn btn-outline-light"><i class="bi bi-arrow-down-circle me-1"></i> Load More</button>'
+                    : '';
+                const newBtn = document.getElementById('load-more-btn');
+                if (newBtn) newBtn.addEventListener('click', loadMore);
+            });
+    }
+
+    function resetAndFetch() {
+        currentPage = 1;
+        fetchUsers(false);
+    }
+
+    function loadMore() {
+        currentPage++;
+        fetchUsers(true);
+    }
+
+    let debounceTimer;
+    searchInput.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            currentQuery = searchInput.value.trim();
+            resetAndFetch();
+        }, 350);
+    });
+
+    const initialLoadMore = document.getElementById('load-more-btn');
+    if (initialLoadMore) initialLoadMore.addEventListener('click', loadMore);
+})();
+</script>
+{% endblock %}

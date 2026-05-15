@@ -4,6 +4,8 @@ from flask_login import LoginManager
 from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from config import Config
+import datetime
+
 from sqlalchemy import event
 from sqlalchemy.engine import Engine
 
@@ -49,6 +51,10 @@ def create_app(config_class=Config):
     app.register_blueprint(community_bp)
 
     from app.models import User
+
+    @app.context_processor
+    def inject_year():
+        return {'current_year': datetime.datetime.now().year}
 
     @login_manager.user_loader
     def load_user(id):

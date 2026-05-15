@@ -16,7 +16,7 @@
 
           <div class="mb-3">
             {{ form.username.label(class="form-label") }}
-            {{ form.username(class="form-control bg-dark text-light border-secondary", placeholder="Your username") }}
+            {{ form.username(class="form-control text-light", placeholder="Your username") }}
             {% for error in form.username.errors %}
               <div class="text-danger small mt-1">{{ error }}</div>
             {% endfor %}
@@ -24,7 +24,7 @@
 
           <div class="mb-3">
             {{ form.password.label(class="form-label") }}
-            {{ form.password(class="form-control bg-dark text-light border-secondary", placeholder="Password") }}
+            {{ form.password(class="form-control text-light", placeholder="Password") }}
             {% for error in form.password.errors %}
               <div class="text-danger small mt-1">{{ error }}</div>
             {% endfor %}
@@ -36,11 +36,11 @@
           </div>
 
           <div class="d-grid">
-            {{ form.submit(class="btn btn-primary") }}
+            {{ form.submit(class="btn btn-mint") }}
           </div>
         </form>
 
-        <p class="text-center text-muted mt-3 mb-0">
+        <p class="text-center text-muted-custom mt-3 mb-0">
           Don't have an account?
           <a href="{{ url_for('auth.register') }}" class="text-decoration-none">Register here</a>
         </p>
