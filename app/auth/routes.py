@@ -123,9 +123,9 @@ def profile_edit():
     if edit_form.validate_on_submit():
         current_user.bio = edit_form.bio.data
         if edit_form.new_username.data != "":
-            current_user.username=edit_form.new_username.data
+            current_user.username=edit_form.new_username.data.strip().lower()
         if edit_form.new_email.data != "":
-            current_user.email=edit_form.new_email.data
+            current_user.email=edit_form.new_email.data.strip().lower()
         if edit_form.new_password.data != "":
             current_user.set_password(edit_form.new_password.data)
         if edit_form.image.data:
