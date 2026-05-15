@@ -8,6 +8,7 @@ from app.models import (
     MealPlan, MealPlanItem, Recipe, RecipeIngredient, PantryItem,
 )
 from app.planner import bp
+from app.utils import json_body
 
 
 DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday',
@@ -20,7 +21,7 @@ def _monday_of_week(d=None):
     return d - timedelta(days=d.weekday())
 
 
-def _get_or_create_plan(user_id, week_start=None):
+def _get_or_create_plan(user_id, week_start=None, commit=True):
     week_start = week_start or _monday_of_week()
     plan = MealPlan.query.filter_by(
         user_id=user_id, week_start=week_start
@@ -28,14 +29,15 @@ def _get_or_create_plan(user_id, week_start=None):
     if plan is None:
         plan = MealPlan(user_id=user_id, week_start=week_start)
         db.session.add(plan)
-        db.session.commit()
+        if commit:
+            db.session.commit()
     return plan
 
 
 @bp.route('/planner')
 @login_required
 def planner():
-    plan = _get_or_create_plan(current_user.id)
+    plan = _get_or_create_plan(current_user.id, commit=False)
     items = MealPlanItem.query.filter_by(mealplan_id=plan.id).all()
 
     grid = {}
@@ -66,17 +68,20 @@ def planner():
 @bp.route('/api/planner/save', methods=['POST'])
 @login_required
 def planner_save():
-    data = request.get_json(silent=True) or {}
+    data = json_body()
     day = data.get('day')
     meal_type = data.get('meal_type')
     recipe_id = data.get('recipe_id')
     custom_text = data.get('custom_text', '')
 
-    if day is None or meal_type not in MEAL_TYPES:
+    if meal_type not in MEAL_TYPES:
         return jsonify(success=False, error='Invalid day or meal_type'), 400
-    day = int(day)
+    if not isinstance(day, int) or isinstance(day, bool):
+        return jsonify(success=False, error='Invalid day'), 400
     if day < 0 or day > 6:
         return jsonify(success=False, error='Day must be 0-6'), 400
+    if not isinstance(custom_text, str):
+        return jsonify(success=False, error='custom_text must be text'), 400
 
     plan = _get_or_create_plan(current_user.id)
     item = MealPlanItem.query.filter_by(
@@ -89,10 +94,19 @@ def planner_save():
         db.session.add(item)
 
     if recipe_id:
-        item.recipe_id = int(recipe_id)
+        try:
+            rid = int(recipe_id)
+        except (ValueError, TypeError):
+            return jsonify(success=False, error='Invalid recipe_id'), 400
+        r = Recipe.query.filter_by(id=rid, is_deleted=False).first()
+        if r is None or (not r.is_public and r.creator_id != current_user.id):
+            return jsonify(success=False, error='Recipe not found'), 400
+        item.recipe_id = r.id
         item.custom_text = ''
     else:
         item.recipe_id = None
+        if custom_text and len(custom_text) > 200:
+            custom_text = custom_text[:200]
         item.custom_text = custom_text
 
     db.session.commit()
@@ -114,12 +128,12 @@ def planner_save():
 @bp.route('/api/planner/remove', methods=['POST'])
 @login_required
 def planner_remove():
-    data = request.get_json(silent=True) or {}
+    data = json_body()
     item_id = data.get('item_id')
     if not item_id:
         return jsonify(success=False, error='Missing item_id'), 400
 
-    item = MealPlanItem.query.get(int(item_id))
+    item = db.session.get(MealPlanItem, int(item_id))
     if item is None:
         return jsonify(success=False, error='Not found'), 404
 
@@ -135,6 +149,16 @@ def planner_remove():
 @login_required
 def grocery():
     return render_template('planner/grocery.html')
+
+
+def _smart_quantity(quantities):
+    if not quantities:
+        return ''
+    try:
+        total = sum(float(q) for q in quantities if str(q).strip())
+        return f'{total:g}'
+    except (ValueError, TypeError):
+        return ' + '.join(str(q) for q in quantities if str(q).strip())
 
 
 @bp.route('/api/grocery-list')
@@ -164,6 +188,9 @@ def grocery_list():
     for item in items:
         if not item.recipe_id:
             continue
+        recipe = Recipe.query.filter_by(id=item.recipe_id, is_deleted=False).first()
+        if not recipe:
+            continue
         for ri in RecipeIngredient.query.filter_by(recipe_id=item.recipe_id).all():
             key = ri.name.lower().strip()
             if key not in ingredient_map:
@@ -183,7 +210,7 @@ def grocery_list():
             excluded_count += 1
         grocery_items.append({
             'name': info['name'],
-            'quantity': ', '.join(info['quantities']) if info['quantities'] else '',
+            'quantity': _smart_quantity(info['quantities']),
             'unit': info['unit'],
             'in_pantry': in_pantry,
         })

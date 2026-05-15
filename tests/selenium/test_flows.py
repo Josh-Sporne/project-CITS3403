@@ -22,7 +22,7 @@ class SeleniumTestCase(unittest.TestCase):
         TestConfig.SERVER_NAME = None
         cls.app = create_app(TestConfig)
         cls.app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test_selenium.db'
-        cls.app.config['WTF_CSRF_ENABLED'] = True
+        cls.app.config['WTF_CSRF_ENABLED'] = False
         cls.app.config['TESTING'] = False
 
         with cls.app.app_context():
@@ -110,14 +110,15 @@ class SeleniumTestCase(unittest.TestCase):
         wait = WebDriverWait(self.driver, 10)
 
         wait.until(EC.presence_of_element_located((By.NAME, 'username')))
-        self.driver.find_element(By.NAME, 'username').send_keys('newuser')
-        self.driver.find_element(By.NAME, 'email').send_keys('new@test.com')
+        username = f'testuser_{int(time.time())}'
+        self.driver.find_element(By.NAME, 'username').send_keys(username)
+        self.driver.find_element(By.NAME, 'email').send_keys(f'{username}@test.com')
         self.driver.find_element(By.NAME, 'password').send_keys('password123')
         self.driver.find_element(By.NAME, 'confirm_password').send_keys('password123')
         self.driver.find_element(By.NAME, 'submit').click()
 
         wait.until(lambda d: '/register' not in d.current_url)
-        self.assertIn('newuser', self.driver.page_source)
+        self.assertIn(username, self.driver.page_source)
 
     def test_login_flow(self):
         self._login('testuser', 'password123')

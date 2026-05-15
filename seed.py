@@ -51,6 +51,26 @@ with app.app_context():
     # ──────────────────────────────────────────────────
     # 2. RECIPES  (30 recipes, all categories)
     # ──────────────────────────────────────────────────
+    # Curated images (Wikimedia Commons, Special:FilePath redirects to direct URL).
+    # Recipes not in this map fall through to the Loremflickr placeholder in templates.
+    RECIPE_IMAGES = {
+        "Fluffy Banana Pancakes":         "https://commons.wikimedia.org/wiki/Special:FilePath/American_Pancakes_with_banana_and_blueberries_-_Jonny%27s_Goring_Bar_%26_Kitchen_2026-01-29.jpg",
+        "Overnight Berry Oats":           "https://commons.wikimedia.org/wiki/Special:FilePath/Child_Care_Recipes_(Team_Nutiriton)_(20230123-FNS-UNK-018).jpg",
+        "Masala Omelette":                "https://commons.wikimedia.org/wiki/Special:FilePath/Masala_omelette_with_bread_toasties.jpg",
+        "Spicy Tofu Stir Fry":            "https://commons.wikimedia.org/wiki/Special:FilePath/Spicy_stir-fry_tofu_-Mapa_Dubu-_(6229385375).jpg",
+        "Avocado Toast with Poached Egg": "https://commons.wikimedia.org/wiki/Special:FilePath/Smashed_Avocado_On_Toast_(with_one_poached_egg)_-_Jonny%27s_2026-01-06.jpg",
+        "Caprese Quesadilla":             "https://commons.wikimedia.org/wiki/Special:FilePath/Caprese-1.jpg",
+        "Mushroom Risotto":               "https://commons.wikimedia.org/wiki/Special:FilePath/Mushroom_and_Leek_Risotto_(49535206656).jpg",
+        "Lamb Kofta with Yoghurt Sauce":  "https://commons.wikimedia.org/wiki/Special:FilePath/Lamb_Kofta_Pitta_-_T_@_The_Dials_2024-02-07.jpg",
+        "Mango Coconut Smoothie Bowl":    "https://commons.wikimedia.org/wiki/Special:FilePath/Mango_Pineapple_Smoothie_Bowl.jpg",
+        "Black Bean Tacos":               "https://commons.wikimedia.org/wiki/Special:FilePath/Vegetables_and_Black_Bean_Tacos_(7212559656).jpg",
+        "Salmon & Quinoa Power Bowl":     "https://commons.wikimedia.org/wiki/Special:FilePath/Salmon_salad_in_a_bowl.jpg",
+        "Margherita Pizza":               "https://commons.wikimedia.org/wiki/Special:FilePath/Eq_it-na_pizza-margherita_sep2005_sml.jpg",
+        "Spinach & Feta Stuffed Peppers": "https://commons.wikimedia.org/wiki/Special:FilePath/Savory_Stuffed_Celery_Pop_Cupcakes.jpg",
+        "Classic Crème Brûlée":           "https://commons.wikimedia.org/wiki/Special:FilePath/Cr%C3%A8me_br%C3%BBl%C3%A9e_at_restaurant_in_Zushi.jpg",
+        "One-Pot Chicken & Rice":         "https://commons.wikimedia.org/wiki/Special:FilePath/Chicken_Pish_Pash.jpg",
+    }
+
     recipe_data = [
 
         # ── BREAKFAST ──────────────────────────────────
@@ -564,6 +584,7 @@ with app.app_context():
             cooking_time=rd["cooking_time"],
             category=rd["category"],
             creator_id=rd["creator"].id,
+            image_filename=RECIPE_IMAGES.get(rd["title"]),
         )
         db.session.add(r)
         db.session.flush()

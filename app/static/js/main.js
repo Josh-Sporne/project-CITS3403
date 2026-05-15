@@ -1,5 +1,39 @@
 /* Plate Theory — Shared Utilities */
 
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.appendChild(document.createTextNode(s ?? ''));
+  return d.innerHTML;
+}
+window.escapeHtml = escapeHtml;
+
+function showErrorToast(message) {
+  const el = document.createElement('div');
+  el.className = 'alert alert-danger position-fixed bottom-0 end-0 m-3';
+  el.style.zIndex = 9999;
+  el.textContent = message;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+window.showErrorToast = showErrorToast;
+
+function toggleFollow(username, btn) {
+  const isFollowing = btn.dataset.following === 'true';
+  fetch(`/user/${username}/follow`, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content }
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.success) {
+      btn.dataset.following = !isFollowing;
+      btn.textContent = isFollowing ? 'Follow' : 'Unfollow';
+    }
+  })
+  .catch(() => showErrorToast('Could not update follow status.'));
+}
+window.toggleFollow = toggleFollow;
+
 async function apiCall(url, method = 'GET', data = null) {
     const opts = {
         method,
@@ -60,6 +94,46 @@ function hideSpinner(container) {
     const overlay = container.querySelector('.pt-spinner-overlay');
     if (overlay) overlay.remove();
 }
+
+/* ── Toast helpers ──
+ * Shows a small floating message bottom-right that fades after ~2.5s.
+ * Use showToast(msg) for success/info (mint).
+ * Use showErrorToast(msg) for failures (coral).
+ */
+function _ensureToastContainer() {
+    let container = document.getElementById('pt-toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'pt-toast-container';
+        document.body.appendChild(container);
+    }
+    return container;
+}
+
+function showToast(message, variant) {
+    const container = _ensureToastContainer();
+    const toast = document.createElement('div');
+    toast.className = 'pt-toast pt-toast--' + (variant === 'error' ? 'error' : 'success');
+    toast.setAttribute('role', 'status');  // a11y: screen readers announce it
+    toast.textContent = message;
+    container.appendChild(toast);
+
+    // Trigger CSS transition by adding .show on the next frame.
+    requestAnimationFrame(() => toast.classList.add('show'));
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 400);  // wait for fade-out before removing
+    }, 2500);
+}
+
+function showErrorToast(message) {
+    showToast(message, 'error');
+}
+
+// Expose globally so other scripts (planner.js, detail.html, etc.) can use them.
+window.showToast = showToast;
+window.showErrorToast = showErrorToast;
 
 document.addEventListener('DOMContentLoaded', () => {
     autoDismissAlerts();

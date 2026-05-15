@@ -1,5 +1,6 @@
 import os
 import uuid
+from datetime import datetime, timedelta, timezone
 
 from flask import (
     current_app, flash, jsonify, redirect, render_template, request, url_for,
@@ -8,9 +9,10 @@ from flask_login import current_user, login_required
 from sqlalchemy import func
 
 from app import db
-from app.models import Comment, Rating, Recipe, RecipeIngredient, SavedRecipe
+from app.models import Comment, Rating, Recipe, RecipeIngredient, SavedRecipe, Tag
 from app.recipes import bp
 from app.recipes.forms import CATEGORY_CHOICES, RecipeForm
+from app.utils import json_body
 
 
 @bp.route('/')
@@ -30,10 +32,12 @@ def home():
         .all()
     )
 
+    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
     new_recipes = (
         base
+        .filter(Recipe.created_at >= seven_days_ago)
         .order_by(Recipe.created_at.desc())
-        .limit(3)
+        .limit(6)
         .all()
     )
 
@@ -46,25 +50,44 @@ def home():
 
 @bp.route('/discover')
 def discover():
-    page = request.args.get('page', 1, type=int)
+    page = max(request.args.get('page', 1, type=int), 1)
     per_page = 12
 
     query = Recipe.query.filter_by(is_public=True, is_deleted=False)
     total = query.count()
 
+    # Return recipes 1..page cumulatively so deep links like /discover?page=3
+    # land the user on a page that already shows everything up to that point.
     recipes = (
         query
         .order_by(Recipe.created_at.desc())
-        .offset((page - 1) * per_page)
-        .limit(per_page)
+        .limit(page * per_page)
         .all()
+    )
+
+    # Build the category pill list from what's actually in the DB so any
+    # category that appears on a recipe card also has a matching filter pill.
+    # Use CATEGORY_CHOICES labels where available, otherwise title-case the
+    # raw value as a fallback (e.g. "indian" -> "Indian").
+    label_map = dict(CATEGORY_CHOICES)
+    db_categories = (
+        db.session.query(Recipe.category)
+        .filter(Recipe.is_public.is_(True), Recipe.is_deleted.is_(False), Recipe.category.isnot(None))
+        .distinct()
+        .all()
+    )
+    categories = sorted(
+        [(value, label_map.get(value, value.replace('-', ' ').title())) for (value,) in db_categories],
+        key=lambda pair: pair[1],
     )
 
     return render_template(
         'recipes/discover.html',
         recipes=recipes,
-        categories=CATEGORY_CHOICES,
+        categories=categories,
         total=total,
+        page=page,
+        per_page=per_page,
     )
 
 
@@ -75,6 +98,8 @@ def api_recipes():
     sort = request.args.get('sort', 'newest', type=str)
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 12, type=int)
+    per_page = max(1, min(per_page, 50))
+    page = max(1, page)
 
     query = Recipe.query.filter_by(is_public=True, is_deleted=False)
 
@@ -143,6 +168,7 @@ def create():
             category=form.category.data,
             instructions=form.instructions.data,
             creator_id=current_user.id,
+            is_public=form.is_public.data,
         )
         recipe.generate_slug()
 
@@ -157,6 +183,26 @@ def create():
 
         db.session.add(recipe)
         db.session.flush()
+
+        # C14: attach selected tags (existing IDs) and create-on-the-fly any new
+        # tag names typed into the free-text input.
+        tag_ids = request.form.getlist('tags')
+        for tid in tag_ids:
+            try:
+                tag = Tag.query.get(int(tid))
+                if tag and tag not in recipe.tags:
+                    recipe.tags.append(tag)
+            except (TypeError, ValueError):
+                continue
+        new_names = [n.strip() for n in request.form.get('new_tags', '').split(',')]
+        for name in [n for n in new_names if n]:
+            tag = Tag.query.filter_by(name=name.lower()).first()
+            if not tag:
+                tag = Tag(name=name.lower())
+                db.session.add(tag)
+                db.session.flush()
+            if tag not in recipe.tags:
+                recipe.tags.append(tag)
 
         names = request.form.getlist('ingredient_name[]')
         qtys = request.form.getlist('ingredient_qty[]')
@@ -177,7 +223,14 @@ def create():
         flash('Recipe created successfully!', 'success')
         return redirect(url_for('recipes.detail', slug=recipe.slug))
 
-    return render_template('recipes/create.html', form=form, edit=False)
+    available_tags = Tag.query.order_by(Tag.name).all()
+    return render_template(
+        'recipes/create.html',
+        form=form,
+        edit=False,
+        available_tags=available_tags,
+        selected_tag_ids=[],
+    )
 
 
 @bp.route('/recipe/<slug>')
@@ -193,6 +246,13 @@ def detail(slug):
     rating_count = recipe.rating_count
     comments = recipe.comments.all()
     ingredients = recipe.ingredients.all()
+
+    # Build a 1..5 -> count distribution so the template can render bars.
+    # We use .all() because recipe.ratings is a query, not a list.
+    rating_distribution = {i: 0 for i in range(1, 6)}
+    for r in recipe.ratings.all():
+        if r.score in rating_distribution:
+            rating_distribution[r.score] += 1
 
     user_saved = False
     user_rating = 0
@@ -211,6 +271,7 @@ def detail(slug):
         recipe=recipe,
         avg_rating=avg_rating,
         rating_count=rating_count,
+        rating_distribution=rating_distribution,
         comments=comments,
         ingredients=ingredients,
         user_saved=user_saved,
@@ -230,12 +291,15 @@ def edit(slug):
 
     if request.method == 'GET':
         ingredients = recipe.ingredients.all()
+        available_tags = Tag.query.order_by(Tag.name).all()
         return render_template(
             'recipes/create.html',
             form=form,
             edit=True,
             recipe=recipe,
             ingredients=ingredients,
+            available_tags=available_tags,
+            selected_tag_ids=[t.id for t in recipe.tags],
         )
 
     if form.validate_on_submit():
@@ -244,6 +308,7 @@ def edit(slug):
         recipe.cooking_time = form.cooking_time.data or 30
         recipe.category = form.category.data
         recipe.instructions = form.instructions.data
+        recipe.is_public = form.is_public.data
 
         if form.image.data:
             if recipe.image_filename:
@@ -262,6 +327,25 @@ def edit(slug):
             recipe.image_filename = filename
 
         RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
+
+        # C14: rebuild tag relations from form (clear-and-add mirrors checkbox state)
+        recipe.tags.clear()
+        for tid in request.form.getlist('tags'):
+            try:
+                tag = Tag.query.get(int(tid))
+                if tag and tag not in recipe.tags:
+                    recipe.tags.append(tag)
+            except (TypeError, ValueError):
+                continue
+        new_names = [n.strip() for n in request.form.get('new_tags', '').split(',')]
+        for name in [n for n in new_names if n]:
+            tag = Tag.query.filter_by(name=name.lower()).first()
+            if not tag:
+                tag = Tag(name=name.lower())
+                db.session.add(tag)
+                db.session.flush()
+            if tag not in recipe.tags:
+                recipe.tags.append(tag)
 
         names = request.form.getlist('ingredient_name[]')
         qtys = request.form.getlist('ingredient_qty[]')
@@ -310,10 +394,10 @@ def delete(slug):
 @login_required
 def rate(slug):
     recipe = Recipe.query.filter_by(slug=slug, is_deleted=False).first_or_404()
-    data = request.get_json(silent=True) or {}
+    data = json_body()
     score = data.get('score', 0)
 
-    if not isinstance(score, int) or score < 1 or score > 5:
+    if not isinstance(score, int) or isinstance(score, bool) or score < 1 or score > 5:
         return jsonify(success=False, error='Score must be 1-5'), 400
 
     existing = Rating.query.filter_by(
@@ -343,11 +427,16 @@ def rate(slug):
 @login_required
 def comment(slug):
     recipe = Recipe.query.filter_by(slug=slug, is_deleted=False).first_or_404()
-    data = request.get_json(silent=True) or {}
-    body = (data.get('body') or '').strip()
+    data = json_body()
+    body = data.get('body')
 
+    if not isinstance(body, str):
+        return jsonify(success=False, error='Comment body must be text'), 400
+    body = body.strip()
     if not body:
         return jsonify(success=False, error='Comment cannot be empty'), 400
+    if len(body) > 2000:
+        return jsonify(success=False, error='Comment too long (max 2000 chars)'), 400
 
     c = Comment(
         user_id=current_user.id,
@@ -417,7 +506,7 @@ def save(slug):
 def my_meals():
     all_recipes = (
         Recipe.query
-        .filter_by(creator_id=current_user.id)
+        .filter_by(creator_id=current_user.id, is_deleted=False)
         .order_by(Recipe.created_at.desc())
         .all()
     )

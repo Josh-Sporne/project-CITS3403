@@ -12,25 +12,43 @@
 
     if (!resultsContainer) return;
 
-    let currentPage = 1;
-    let currentQuery = '';
-    let currentCategory = '';
+    // Pick up initial pagination state from data attributes the server set,
+    // so deep links like /discover?page=3 don't make Load More re-fetch page 1.
+    const initialPage = parseInt(resultsContainer.dataset.currentPage, 10) || 1;
+    const perPage = parseInt(resultsContainer.dataset.perPage, 10) || 12;
+
+    // Pick up initial filter state from the URL so deep links like
+    // /discover?category=vegan or /discover?q=pasta apply on page load.
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialCategory = (urlParams.get('category') || '').toLowerCase();
+    const initialQuery = urlParams.get('q') || '';
+
+    let currentPage = initialPage;
+    let currentQuery = initialQuery;
+    let currentCategory = initialCategory;
     let currentSort = 'newest';
 
     /* ── Tag pills ── */
+
+    function setActiveTag(activePill) {
+        tagPills.forEach(t => {
+            const isActive = t === activePill;
+            t.classList.toggle('active', isActive);
+            t.setAttribute('aria-pressed', String(isActive));
+        });
+    }
 
     tagPills.forEach(pill => {
         pill.addEventListener('click', () => {
             const category = pill.dataset.category;
 
             if (pill.classList.contains('active') && category !== '') {
-                pill.classList.remove('active');
-                currentCategory = '';
+                // Deselecting the current category — fall back to "All".
                 const allPill = document.querySelector('#category-tags .tag[data-category=""]');
-                if (allPill) allPill.classList.add('active');
+                setActiveTag(allPill || pill);
+                currentCategory = '';
             } else {
-                tagPills.forEach(t => t.classList.remove('active'));
-                pill.classList.add('active');
+                setActiveTag(pill);
                 currentCategory = category || '';
             }
 
@@ -85,17 +103,17 @@
             category: currentCategory,
             sort: currentSort,
             page: currentPage,
-            per_page: 12
+            per_page: perPage
         });
 
-        showSpinner(resultsContainer);
+        // Skeleton placeholders only on a fresh fetch (not when appending more
+        // results via Load More — those shouldn't blank out what's already there).
+        if (!append) showSkeletons(resultsContainer, perPage);
 
         try {
             const data = await apiCall(`/api/recipes?${params}`);
 
-            hideSpinner(resultsContainer);
-
-            if (!append) resultsContainer.innerHTML = '';
+            if (!append) resultsContainer.innerHTML = '';  // clears skeletons
 
             if (data.recipes.length === 0 && !append) {
                 resultsContainer.innerHTML = '<div class="col-12"><p class="text-muted-custom text-center">No recipes found.</p></div>';
@@ -120,19 +138,48 @@
                 bindLoadMore();
             }
         } catch (err) {
-            hideSpinner(resultsContainer);
             if (!append) {
                 resultsContainer.innerHTML = '<div class="col-12"><p class="text-coral text-center">Could not load recipes. Please try again.</p></div>';
             }
         }
     }
 
+    /* ── Skeleton placeholder cards ── */
+    function showSkeletons(grid, count) {
+        grid.innerHTML = '';  // wipe whatever was there
+        for (let i = 0; i < count; i++) {
+            const col = document.createElement('div');
+            col.className = 'col-lg-3 col-md-4 col-sm-6';
+            col.innerHTML = `
+                <div class="pt-card h-100" aria-hidden="true">
+                    <div class="skeleton" style="height:160px;border-radius:12px;margin-bottom:0.65rem;"></div>
+                    <div class="skeleton" style="height:1.2rem;width:75%;margin-bottom:0.4rem;"></div>
+                    <div class="skeleton" style="height:0.9rem;width:50%;margin-bottom:0.4rem;"></div>
+                    <div class="skeleton" style="height:0.9rem;width:35%;"></div>
+                </div>`;
+            grid.appendChild(col);
+        }
+    }
+
     /* ── Card HTML builder ── */
 
     function buildRecipeCard(r) {
-        const imgBlock = r.image_filename
-            ? `<img src="/static/uploads/${escapeHtml(r.image_filename)}" alt="${escapeHtml(r.title)}" style="width:100%;height:160px;object-fit:cover;border-radius:12px;margin-bottom:0.65rem;">`
-            : '';
+        // Same image-fallback pattern as the server-rendered partial:
+        // real upload if present, otherwise a deterministic Loremflickr food photo.
+        // Use the recipe slug as comma-separated keywords (e.g. "kimchi-fried-rice"
+        // → "kimchi,fried,rice") so Loremflickr returns more relevant food photos.
+        const slugTags = (r.slug || '').replace(/-/g, ',');
+        let imgSrc;
+        if (r.image_filename) {
+            // image_filename can be either a local upload filename OR a full URL
+            // (curated images in seed.py use Wikimedia Special:FilePath URLs).
+            imgSrc = r.image_filename.startsWith('http')
+                ? r.image_filename
+                : `/static/uploads/${escapeHtml(r.image_filename)}`;
+        } else {
+            imgSrc = `https://loremflickr.com/600/400/${slugTags},food?lock=${r.id}`;
+        }
+        const imgBlock = `<img src="${imgSrc}" alt="${escapeHtml(r.title)}" style="width:100%;height:160px;object-fit:cover;border-radius:12px;margin-bottom:0.65rem;">`;
 
         const stars = Array.from({ length: 5 }, (_, i) =>
             `<i class="bi bi-star${i < Math.round(r.avg_rating || 0) ? '-fill' : ''}"></i>`
@@ -169,5 +216,22 @@
         const div = document.createElement('div');
         div.appendChild(document.createTextNode(str));
         return div.innerHTML;
+    }
+
+    /* ── Initial sync: apply ?category and ?q from URL on page load ── */
+    if (initialCategory || initialQuery) {
+        if (searchInput && initialQuery) {
+            searchInput.value = initialQuery;
+        }
+        if (initialCategory) {
+            tagPills.forEach(t => {
+                const isMatch = t.dataset.category.toLowerCase() === initialCategory;
+                t.classList.toggle('active', isMatch);
+                t.setAttribute('aria-pressed', String(isMatch));
+            });
+        }
+        // Re-fetch from page 1 with the URL-derived filters applied.
+        currentPage = 1;
+        fetchRecipes(false);
     }
 })();

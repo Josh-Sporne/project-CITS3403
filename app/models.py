@@ -8,6 +8,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
 
 
+PASSWORD_HASH_METHOD = 'scrypt' if hasattr(hashlib, 'scrypt') else 'pbkdf2:sha256'
+
+
 class User(UserMixin, db.Model):
     __tablename__ = 'user'
 
@@ -33,7 +36,9 @@ class User(UserMixin, db.Model):
     pantry_items = db.relationship('PantryItem', backref='user', lazy='dynamic')
 
     def set_password(self, password):
-        self.password_hash = generate_password_hash(password)
+        self.password_hash = generate_password_hash(
+            password, method=PASSWORD_HASH_METHOD
+        )
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
@@ -86,12 +91,23 @@ class Recipe(db.Model):
         order_by='Comment.created_at.desc()',
     )
     saved_by = db.relationship('SavedRecipe', backref='recipe', lazy='dynamic')
+    tags = db.relationship(
+        'Tag',
+        secondary='recipe_tag',
+        backref=db.backref('recipes', lazy='dynamic'),
+        lazy='subquery',
+    )
 
     def generate_slug(self):
         base = slugify(self.title)
+        if not base or base.strip('-') == '':
+            base = f'recipe-{self.id or "new"}'
+        existing = {r.slug for r in Recipe.query.filter(
+            Recipe.slug.like(f'{base}%')
+        ).with_entities(Recipe.slug).all()}
         slug = base
         counter = 1
-        while Recipe.query.filter_by(slug=slug).first() is not None:
+        while slug in existing:
             slug = f'{base}-{counter}'
             counter += 1
         self.slug = slug
@@ -129,7 +145,7 @@ class MealPlan(db.Model):
     __tablename__ = 'meal_plan'
 
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False, index=True)
     week_start = db.Column(db.Date, nullable=False)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
@@ -143,7 +159,7 @@ class MealPlanItem(db.Model):
     __tablename__ = 'meal_plan_item'
 
     id = db.Column(db.Integer, primary_key=True)
-    mealplan_id = db.Column(db.Integer, db.ForeignKey('meal_plan.id'))
+    mealplan_id = db.Column(db.Integer, db.ForeignKey('meal_plan.id', ondelete='CASCADE'), nullable=False)
     recipe_id = db.Column(db.Integer, db.ForeignKey('recipe.id'), nullable=True)
     day_of_week = db.Column(db.Integer, nullable=False)  # 0=Mon .. 6=Sun
     meal_type = db.Column(db.String(20), default='dinner')  # breakfast/lunch/dinner
@@ -207,4 +223,39 @@ class Follower(db.Model):
 
     __table_args__ = (
         db.UniqueConstraint('follower_id', 'followed_id', name='uq_follower_followed'),
+    )
+
+
+class Tag(db.Model):
+    """A reusable tag/label that can be attached to many recipes (C14)."""
+    __tablename__ = 'tag'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+    def __repr__(self):
+        return f'<Tag {self.name}>'
+
+
+class RecipeTag(db.Model):
+    """Association table linking recipes to tags (many-to-many)."""
+    __tablename__ = 'recipe_tag'
+
+    id = db.Column(db.Integer, primary_key=True)
+    recipe_id = db.Column(
+        db.Integer,
+        db.ForeignKey('recipe.id', ondelete='CASCADE'),
+        nullable=False,
+        index=True,
+    )
+    tag_id = db.Column(
+        db.Integer,
+        db.ForeignKey('tag.id', ondelete='CASCADE'),
+        nullable=False,
+        index=True,
+    )
+
+    __table_args__ = (
+        db.UniqueConstraint('recipe_id', 'tag_id', name='uq_recipe_tag'),
     )

@@ -3,11 +3,32 @@
 {% block title %}{{ recipe.title }} — Plate Theory{% endblock %}
 
 {% block content %}
+{% if recipe.image_filename %}
+    {% set hero_src = recipe.image_filename if recipe.image_filename.startswith('http')
+                      else url_for('static', filename='uploads/' + recipe.image_filename) %}
+{% else %}
+    {% set hero_src = 'https://loremflickr.com/1200/800/' ~ recipe.slug|replace('-', ',') ~ ',food?lock=' ~ recipe.id %}
+{% endif %}
+
 <!-- Hero Image -->
-<div class="recipe-hero mb-4" {% if not recipe.image_filename %}data-emoji="🍜"{% endif %}>
-    {% if recipe.image_filename %}
-    <img src="{{ url_for('static', filename='uploads/' + recipe.image_filename) }}" alt="{{ recipe.title }}">
-    {% endif %}
+<div class="recipe-hero mb-4">
+    <img id="recipe-hero-img"
+         class="recipe-hero-img"
+         src="{{ hero_src }}"
+         alt="{{ recipe.title }}"
+         tabindex="0"
+         role="button"
+         aria-label="Open larger view of {{ recipe.title }}">
+</div>
+
+<!-- Lightbox overlay (C11+U5+C-V8) — hidden by default, shown on hero click -->
+<div id="recipe-lightbox" class="pt-lightbox" role="dialog" aria-modal="true" aria-hidden="true" aria-label="Recipe image full view">
+    <button type="button" id="recipe-lightbox-close" class="pt-lightbox-close" aria-label="Close">
+        <i class="bi bi-x-lg"></i>
+    </button>
+    <img class="pt-lightbox-img"
+         src="{{ hero_src }}"
+         alt="{{ recipe.title }}">
 </div>
 
 <!-- Title & Meta -->
@@ -28,10 +49,14 @@
             <span class="text-muted-custom">
                 <i class="bi bi-clock me-1"></i>{{ recipe.cooking_time or 30 }} min
             </span>
-            <span class="badge bg-info">{{ recipe.category|capitalize }}</span>
+            {% if recipe.category %}
+            <a href="{{ url_for('recipes.discover') }}?category={{ recipe.category|lower }}"
+               class="badge bg-info text-decoration-none"
+               title="Filter by {{ recipe.category|capitalize }}">{{ recipe.category|capitalize }}</a>
+            {% endif %}
             {% if recipe.creator %}
             <span class="text-muted-custom small">
-                <i class="bi bi-star-fill text-sun"></i> {{ recipe.creator.recipes.count() }} recipes
+                <i class="bi bi-journal-text"></i> {{ recipe.creator.recipes.count() }} recipes
             </span>
             {% endif %}
         </div>
@@ -43,6 +68,9 @@
             <span id="save-text">{{ 'Saved' if user_saved else 'Save Recipe' }}</span>
         </button>
         {% endif %}
+        <button id="share-btn" type="button" class="btn btn-sm btn-outline-light">
+            <i class="bi bi-share me-1"></i> Share
+        </button>
         {% if current_user.is_authenticated and recipe.creator_id == current_user.id and not recipe.is_deleted %}
             {% if not recipe.is_public %}
             <button type="button" id="recipe-publish-btn" class="btn btn-sm btn-mint" data-slug="{{ recipe.slug }}">
@@ -53,10 +81,20 @@
                 <i class="bi bi-lock me-1"></i> Make private
             </button>
             {% endif %}
+            <a href="{{ url_for('recipes.edit', slug=recipe.slug) }}" class="btn btn-sm btn-outline-light">
+                <i class="bi bi-pencil me-1"></i> Edit
+            </a>
+            <form method="POST" action="{{ url_for('recipes.delete', slug=recipe.slug) }}" class="d-inline" onsubmit="return confirm('Delete this recipe? This cannot be undone.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm btn-outline-coral">
+                    <i class="bi bi-trash me-1"></i> Delete
+                </button>
+            </form>
         {% endif %}
-        <a href="/planner" class="btn btn-sm btn-outline-light">
+        <button type="button" class="btn btn-sm btn-outline-light"
+                onclick="openAddToPlanModal({{ recipe.id }}, {{ recipe.title|tojson }})">
             <i class="bi bi-calendar-plus me-1"></i> Add to Meal Plan
-        </a>
+        </button>
     </div>
 </div>
 
@@ -96,9 +134,19 @@
 <section class="pt-panel mb-4">
     <h3 class="mb-3"><i class="bi bi-star me-2 text-sun"></i>Ratings</h3>
     <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
-        <div class="star-rating" {% if current_user.is_authenticated %}data-interactive="true"{% endif %} id="star-rating">
+        <div class="star-rating"
+             {% if current_user.is_authenticated %}data-interactive="true" role="radiogroup" aria-label="Rate this recipe"{% endif %}
+             id="star-rating">
             {% for i in range(1, 6) %}
-            <i class="bi bi-star{% if i <= avg_rating|round(0, 'floor')|int %}-fill{% endif %}" data-value="{{ i }}" style="cursor:{% if current_user.is_authenticated %}pointer{% else %}default{% endif %};font-size:1.4rem;"></i>
+            <i class="bi bi-star{% if i <= avg_rating|round(0, 'floor')|int %}-fill{% endif %}"
+               data-value="{{ i }}"
+               style="cursor:{% if current_user.is_authenticated %}pointer{% else %}default{% endif %};font-size:1.4rem;"
+               {% if current_user.is_authenticated %}
+               role="radio"
+               tabindex="0"
+               aria-label="Rate {{ i }} star{{ 's' if i != 1 else '' }}"
+               aria-checked="{{ 'true' if user_rating == i else 'false' }}"
+               {% endif %}></i>
             {% endfor %}
         </div>
         <span class="fw-bold" id="avg-rating-text">{{ avg_rating }}</span>
@@ -107,6 +155,22 @@
         <span class="badge bg-success">You rated {{ user_rating }}/5</span>
         {% endif %}
     </div>
+
+    {% if rating_count > 0 %}
+    <div class="rating-breakdown" aria-label="Rating distribution">
+        {% for score in [5, 4, 3, 2, 1] %}
+        {% set count = rating_distribution[score] %}
+        {% set pct = (count / rating_count * 100) if rating_count else 0 %}
+        <div class="rating-breakdown-row">
+            <span class="rating-breakdown-label">{{ score }} <i class="bi bi-star-fill" aria-hidden="true"></i></span>
+            <div class="rating-breakdown-bar">
+                <div class="rating-breakdown-fill" style="width: {{ pct }}%;"></div>
+            </div>
+            <span class="rating-breakdown-count">{{ count }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 </section>
 
 <!-- Comments Section -->
@@ -116,7 +180,7 @@
     <div id="comments-list">
         {% for c in comments %}
         <div class="review">
-            <strong>@{{ c.author.username }}</strong>
+            <strong><a href="{{ url_for('auth.public_profile', username=c.author.username) }}" class="text-decoration-none" style="color:var(--pt-text);">@{{ c.author.username }}</a></strong>
             <span class="text-muted-custom small ms-2">{{ c.created_at.strftime('%b %d, %Y') if c.created_at else '' }}</span>
             <p class="mb-0 mt-1">{{ c.body }}</p>
         </div>
@@ -128,6 +192,7 @@
 
     {% if current_user.is_authenticated %}
     <div class="mt-3 pt-3" style="border-top:1px dashed var(--pt-border);">
+        <label for="comment-input" class="visually-hidden">Write a comment</label>
         <textarea id="comment-input" class="form-control mb-2" rows="3" placeholder="Write a comment…"></textarea>
         <button id="comment-btn" class="btn btn-sm btn-mint">
             <i class="bi bi-send me-1"></i> Post Comment
@@ -138,35 +203,69 @@
 {% endblock %}
 
 {% block scripts %}
+<style>
+    /* Visible keyboard-focus indicator for star rating (a11y). */
+    .star-rating [role="radio"]:focus-visible {
+        outline: 2px solid var(--pt-mint, #6ee7b7);
+        outline-offset: 2px;
+        border-radius: 3px;
+    }
+</style>
 <script>
 (function () {
     const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
-    const slug = '{{ recipe.slug }}';
+    const slug = {{ recipe.slug|tojson }};
 
     /* Rating */
     const starContainer = document.getElementById('star-rating');
     if (starContainer && starContainer.dataset.interactive) {
         const stars = starContainer.querySelectorAll('i[data-value]');
+
+        function submitRating(score) {
+            fetch(`/recipe/${slug}/rate`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
+                body: JSON.stringify({score}),
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('avg-rating-text').textContent = data.avg_rating;
+                    document.getElementById('rating-count-text').textContent =
+                        `(${data.rating_count} rating${data.rating_count !== 1 ? 's' : ''})`;
+                    const filled = Math.round(data.avg_rating);
+                    stars.forEach((s, idx) => {
+                        s.className = idx < filled ? 'bi bi-star-fill' : 'bi bi-star';
+                        s.setAttribute('aria-checked', String(parseInt(s.dataset.value, 10) === score));
+                    });
+                    showToast('Thanks for rating!');
+                } else if (data.error) {
+                    showErrorToast(data.error);
+                }
+            })
+            .catch(() => showErrorToast('Could not submit rating.'));
+        }
+
         stars.forEach(star => {
             star.addEventListener('click', () => {
-                const score = parseInt(star.dataset.value, 10);
-                fetch(`/recipe/${slug}/rate`, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
-                    body: JSON.stringify({score}),
-                })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        document.getElementById('avg-rating-text').textContent = data.avg_rating;
-                        document.getElementById('rating-count-text').textContent =
-                            `(${data.rating_count} rating${data.rating_count !== 1 ? 's' : ''})`;
-                        const filled = Math.round(data.avg_rating);
-                        stars.forEach((s, idx) => {
-                            s.className = idx < filled ? 'bi bi-star-fill' : 'bi bi-star';
-                        });
-                    }
-                });
+                submitRating(parseInt(star.dataset.value, 10));
+            });
+
+            star.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();  // stop Space scrolling the page
+                    submitRating(parseInt(star.dataset.value, 10));
+                } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    const idx = Array.from(stars).indexOf(star);
+                    const next = stars[Math.min(idx + 1, stars.length - 1)];
+                    next.focus();
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    const idx = Array.from(stars).indexOf(star);
+                    const prev = stars[Math.max(idx - 1, 0)];
+                    prev.focus();
+                }
             });
 
             star.addEventListener('mouseenter', () => {
@@ -196,6 +295,11 @@
             const body = commentInput.value.trim();
             if (!body) return;
 
+            // Prevent double-submit while the request is in flight.
+            commentBtn.disabled = true;
+            const originalBtnHtml = commentBtn.innerHTML;
+            commentBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i> Posting…';
+
             fetch(`/recipe/${slug}/comment`, {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json', 'X-CSRFToken': CSRF},
@@ -203,6 +307,8 @@
             })
             .then(r => r.json())
             .then(data => {
+                commentBtn.disabled = false;
+                commentBtn.innerHTML = originalBtnHtml;
                 if (data.success) {
                     const noMsg = document.getElementById('no-comments-msg');
                     if (noMsg) noMsg.remove();
@@ -210,16 +316,45 @@
                     const dt = data.comment.created_at ? new Date(data.comment.created_at) : new Date();
                     const dateStr = dt.toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'});
 
+                    // Build DOM with createElement/textContent so user-supplied
+                    // strings are NEVER parsed as HTML (XSS safe).
                     const div = document.createElement('div');
                     div.className = 'review';
-                    div.innerHTML = `
-                        <strong>@${data.comment.author}</strong>
-                        <span class="text-muted-custom small ms-2">${dateStr}</span>
-                        <p class="mb-0 mt-1">${data.comment.body}</p>
-                    `;
+
+                    const strong = document.createElement('strong');
+                    const authorLink = document.createElement('a');
+                    authorLink.href = '/user/' + encodeURIComponent(data.comment.author);
+                    authorLink.className = 'text-decoration-none';
+                    authorLink.style.color = 'var(--pt-text)';
+                    authorLink.textContent = '@' + data.comment.author;
+                    strong.appendChild(authorLink);
+
+                    const dateSpan = document.createElement('span');
+                    dateSpan.className = 'text-muted-custom small ms-2';
+                    dateSpan.textContent = dateStr;
+
+                    const body = document.createElement('p');
+                    body.className = 'mb-0 mt-1';
+                    body.textContent = data.comment.body;
+
+                    div.appendChild(strong);
+                    div.appendChild(dateSpan);
+                    div.appendChild(body);
+
                     commentsList.insertBefore(div, commentsList.firstChild);
                     commentInput.value = '';
+
+                    // Brief mint flash so the user sees their comment landed.
+                    div.classList.add('highlight');
+                    setTimeout(() => div.classList.remove('highlight'), 1700);
+                } else if (data.error) {
+                    showErrorToast(data.error);
                 }
+            })
+            .catch(() => {
+                commentBtn.disabled = false;
+                commentBtn.innerHTML = originalBtnHtml;
+                showErrorToast('Could not post comment. Please try again.');
             });
         });
     }
@@ -275,12 +410,76 @@
     const unpubBtn = document.getElementById('recipe-unpublish-btn');
     if (unpubBtn) {
         unpubBtn.addEventListener('click', () => {
-            if (!confirm('Make this recipe private? It will no longer appear in Discover.')) return;
+            if (!confirm('Make this recipe private? It will no longer be visible to others.')) return;
             unpubBtn.disabled = true;
             postVisibility(false).then(res => {
                 if (res.ok && res.data.success) window.location.reload();
-                else { alert(res.data.error || 'Could not update.'); unpubBtn.disabled = false; }
+                else { alert(res.data.error || 'Could not make private.'); unpubBtn.disabled = false; }
             }).catch(() => { alert('Network error.'); unpubBtn.disabled = false; });
+        });
+    }
+
+    /* Share — copy recipe URL to clipboard */
+    const shareBtn = document.getElementById('share-btn');
+    if (shareBtn) {
+        const originalHtml = shareBtn.innerHTML;
+        shareBtn.addEventListener('click', async () => {
+            const url = window.location.href;
+            try {
+                await navigator.clipboard.writeText(url);
+                shareBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Copied!';
+                shareBtn.classList.add('btn-mint');
+                shareBtn.classList.remove('btn-outline-light');
+                setTimeout(() => {
+                    shareBtn.innerHTML = originalHtml;
+                    shareBtn.classList.remove('btn-mint');
+                    shareBtn.classList.add('btn-outline-light');
+                }, 1800);
+            } catch (err) {
+                window.prompt('Copy this link:', url);
+            }
+        });
+    }
+
+    /* Lightbox — click hero image to view at full size (C11+U5+C-V8) */
+    const heroImg = document.getElementById('recipe-hero-img');
+    const lightbox = document.getElementById('recipe-lightbox');
+    const lightboxClose = document.getElementById('recipe-lightbox-close');
+
+    if (heroImg && lightbox) {
+        function openLightbox() {
+            lightbox.classList.add('show');
+            lightbox.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';   // prevent background scroll
+            lightboxClose.focus();                      // a11y: move focus into the modal
+        }
+        function closeLightbox() {
+            lightbox.classList.remove('show');
+            lightbox.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+            heroImg.focus();                            // return focus to the trigger
+        }
+
+        heroImg.addEventListener('click', openLightbox);
+        heroImg.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                openLightbox();
+            }
+        });
+
+        lightboxClose.addEventListener('click', closeLightbox);
+
+        // Click anywhere on the dim backdrop (but NOT on the image itself).
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) closeLightbox();
+        });
+
+        // Esc key closes the lightbox while it's open.
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && lightbox.classList.contains('show')) {
+                closeLightbox();
+            }
         });
     }
 })();
