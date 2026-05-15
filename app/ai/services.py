@@ -1,4 +1,6 @@
 import json
+import urllib.error
+import urllib.request
 
 from flask import current_app
 from app import db
@@ -134,9 +136,6 @@ def get_ai_suggestions(ingredients, preferences, api_key):
         return []
 
     try:
-        import openai
-
-        client = openai.OpenAI(api_key=api_key, timeout=20.0)
         prompt = (
             "You are a creative chef. Given these ingredients: "
             f"{', '.join(ingredients)}. "
@@ -148,21 +147,37 @@ def get_ai_suggestions(ingredients, preferences, api_key):
             "No markdown, no explanation, just the JSON array."
         )
 
-        response = client.chat.completions.create(
-            model='gpt-3.5-turbo',
-            messages=[{'role': 'user', 'content': prompt}],
-            temperature=0.7,
-            max_tokens=1200,
-            timeout=20.0,
+        payload = {
+            'model': 'gpt-4o-mini',
+            'messages': [{'role': 'user', 'content': prompt}],
+            'temperature': 0.7,
+            'max_tokens': 1200,
+        }
+        req = urllib.request.Request(
+            'https://api.openai.com/v1/chat/completions',
+            data=json.dumps(payload).encode('utf-8'),
+            headers={
+                'Authorization': f'Bearer {api_key}',
+                'Content-Type': 'application/json',
+            },
+            method='POST',
         )
 
-        text = response.choices[0].message.content.strip()
+        with urllib.request.urlopen(req, timeout=18) as response:
+            body = response.read().decode('utf-8')
+
+        data = json.loads(body)
+        text = data['choices'][0]['message']['content'].strip()
         if text.startswith('```'):
             text = text.split('\n', 1)[1]
             text = text.rsplit('```', 1)[0]
         suggestions = json.loads(text)
         return suggestions if isinstance(suggestions, list) else []
 
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode('utf-8', errors='replace')
+        current_app.logger.exception('OpenAI API error: %s', detail)
+        return []
     except Exception as e:
         current_app.logger.exception('get_ai_suggestions failed: %s', e)
         return []
