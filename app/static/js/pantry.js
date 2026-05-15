@@ -105,12 +105,17 @@
         spinner.classList.remove('d-none');
         resultsContainer.innerHTML = '';
 
+        const controller = new AbortController();
+        const timeoutMs = useAi ? 25000 : 10000;
+        const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+
         fetch('/api/ai/suggest', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': CSRF,
             },
+            signal: controller.signal,
             body: JSON.stringify({
                 ingredients: ingredients,
                 preferences: buildPreferences(),
@@ -127,9 +132,15 @@
                 }
                 renderResults(data.matches, data.ai_suggestions);
             })
-            .catch(() => {
+            .catch((err) => {
                 spinner.classList.add('d-none');
-                resultsContainer.innerHTML = '<div class="alert alert-danger">Network error — please try again.</div>';
+                const msg = err && err.name === 'AbortError'
+                    ? (useAi ? 'AI generation timed out — please try again.' : 'Recipe matching timed out — please try again.')
+                    : 'Network error — please try again.';
+                resultsContainer.innerHTML = `<div class="alert alert-danger">${escapeHtml(msg)}</div>`;
+            })
+            .finally(() => {
+                window.clearTimeout(timeoutId);
             });
     }
 
