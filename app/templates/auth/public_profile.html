@@ -193,7 +193,7 @@
 </div>
 <script>
 function openFollow(type) {
-  const username = '{{ current_user.username }}';
+  const username = '{{ user.username }}';
   fetch(`/api/${type}/${username}`)
     .then(r => r.json())
     .then(users => {
