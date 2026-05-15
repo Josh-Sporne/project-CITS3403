@@ -279,7 +279,13 @@ function initHeroReveal() {
         el.innerHTML = words.map((w, i) =>
             `<span class="word-reveal-wrap"><span class="word-reveal-inner" style="--wi:${i}">${w}</span></span>`
         ).join(' ');
-        el.classList.add('words-ready');
+        // Double rAF: first frame paints the hidden state,
+        // second frame triggers the transition to visible state.
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                el.classList.add('words-ready');
+            });
+        });
     });
 }
 
