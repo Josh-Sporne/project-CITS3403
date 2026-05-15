@@ -235,11 +235,10 @@ def users():
 @bp.route('/api/users')
 def api_users():
     q = request.args.get('q', '', type=str).strip()
-    page = request.args.get('page', 1, type=int)
-    per_page = request.args.get('per_page', 12, type=int)
+    page = max(request.args.get('page', 1, type=int), 1)
+    per_page = max(1, min(request.args.get('per_page', 12, type=int), 50))
 
     query = User.query
-
     if q:
         query = query.filter(User.username.ilike(f'%{q}%'))
 
@@ -247,4 +246,13 @@ def api_users():
     users = query.offset((page - 1) * per_page).limit(per_page).all()
     has_next = (page * per_page) < total
 
-    return jsonify(users=users, total=total, has_next=has_next)
+    # SQLAlchemy User objects aren't JSON-serialisable directly — convert to dicts.
+    return jsonify(
+        users=[{
+            'id': u.id,
+            'username': u.username,
+            'avatar_url': u.avatar_url,
+        } for u in users],
+        total=total,
+        has_next=has_next,
+    )
