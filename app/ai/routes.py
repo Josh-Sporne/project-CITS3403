@@ -14,6 +14,7 @@ from app.ai.recipe_defaults import (
 from app.ai.services import (
     get_pantry_matches,
     get_ai_suggestions,
+    get_recipe_image_url,
     map_diet_to_category,
     validate_ai_save_payload,
 )
@@ -146,6 +147,11 @@ def save_ai_recipe():
     db.session.add(recipe)
     db.session.flush()
     recipe.generate_slug()
+    recipe.image_filename = get_recipe_image_url(
+        payload['title'],
+        category=category,
+        ingredients=payload['ingredients'],
+    )
 
     for row in payload['ingredients']:
         db.session.add(RecipeIngredient(
@@ -156,4 +162,9 @@ def save_ai_recipe():
         ))
 
     db.session.commit()
-    return jsonify(success=True, slug=recipe.slug, id=recipe.id)
+    return jsonify(
+        success=True,
+        slug=recipe.slug,
+        id=recipe.id,
+        image_filename=recipe.image_filename,
+    )
