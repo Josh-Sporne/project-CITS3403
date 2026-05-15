@@ -49,6 +49,7 @@ def get_pantry_matches(user_id, max_time=None):
             'slug': recipe.slug,
             'cooking_time': recipe.cooking_time,
             'category': recipe.category,
+            'image_filename': recipe.image_filename,  # for image fallback in JS
             'match_pct': match_pct,
             'total_ingredients': total,
             'matched_ingredients': matched,
