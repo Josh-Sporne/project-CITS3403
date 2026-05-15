@@ -31,6 +31,21 @@ Plate Theory solves the daily problem of "what should I eat?" by combining recip
 - **Forms & Security:** Flask-WTF with CSRF protection on all forms and AJAX requests
 - **Pantry Matching:** Database-driven ingredient matching with optional OpenAI integration
 
+## AI Features (testing notes for markers)
+
+The Pantry page (`/pantry`) has two buttons:
+
+- **Find Matching Recipes** — uses local DB matching against the user's pantry items. **Works without any API key.**
+- **Generate with AI** — calls OpenAI (`gpt-3.5-turbo`) to create new recipe ideas from the pantry contents. Requires an `OPENAI_API_KEY` env var.
+
+To enable AI generation locally:
+
+1. Get a key from https://platform.openai.com/api-keys (requires an OpenAI account; usage is billed per request, very cheap on `gpt-3.5-turbo`).
+2. Add to your `.env`: `OPENAI_API_KEY=sk-your-key-here`
+3. Restart the app.
+
+If no key is set, **the "Generate with AI" button silently returns no suggestions** — the rest of the app is fully functional. We deliberately don't ship our own API key in the repo for security reasons. If a marker needs a temporary key for grading, please reach out to the team and we'll provide one privately.
+
 ### Database Schema
 
 10 models with relationships, indexes, and unique constraints:
