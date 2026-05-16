@@ -1,5 +1,3 @@
-import uuid
-import os
 
 from flask import flash, redirect, render_template, request, url_for, current_app, jsonify
 from flask_login import current_user, login_required, login_user, logout_user
@@ -10,6 +8,7 @@ from app import db
 from app.auth import bp
 from app.auth.forms import EditProfileForm, LoginForm, RegisterForm
 from app.models import Follower, Rating, Recipe, SavedRecipe, User, Comment
+from app.utils import save_uploaded_image
 
 
 @bp.route('/register', methods=['GET', 'POST'])
@@ -139,13 +138,9 @@ def profile_edit():
         if edit_form.new_password.data != "":
             current_user.set_password(edit_form.new_password.data)
         if edit_form.image.data:
-            image = edit_form.image.data
-            ext = image.filename.rsplit('.', 1)[-1].lower()
-            filename = f'{uuid.uuid4().hex}.{ext}'
-            upload_dir = current_app.config['UPLOAD_FOLDER']
-            os.makedirs(upload_dir, exist_ok=True)
-            image.save(os.path.join(upload_dir, filename))
-            current_user.avatar = url_for('static', filename='uploads/' + filename)
+            filename = save_uploaded_image(edit_form.image.data)
+            if filename:
+                current_user.avatar = url_for('static', filename='uploads/' + filename)
         db.session.commit()
         flash('Profile updated!', 'success')
         # On success, drop the #settings-pane hash so the page opens on the
@@ -161,33 +156,49 @@ def profile_edit():
     # On error, stay on the settings tab so the user can fix and retry.
     return redirect(url_for('auth.profile')+"#settings-pane")
 
+def _user_list_payload(user_ids):
+    """Build the JSON payload used by /api/followers and /api/following.
+
+    Batches the User fetch and the current_user is-following check into one
+    query each, instead of issuing N queries inside a Python loop.
+    """
+    if not user_ids:
+        return []
+    users = User.query.filter(User.id.in_(user_ids)).all()
+    current_following_ids = {
+        f.followed_id
+        for f in Follower.query.filter(
+            Follower.follower_id == current_user.id,
+            Follower.followed_id.in_(user_ids),
+        ).all()
+    }
+    return [{
+        'username': u.username,
+        'avatar_url': u.avatar_url,
+        'is_following': u.id in current_following_ids,
+    } for u in users]
+
+
 @bp.route('/api/followers/<username>')
 @login_required
 def api_followers(username):
     user = User.query.filter_by(username=username).first_or_404()
-    follows = Follower.query.filter_by(followed_id=user.id).all()
-    followers=[]
-    for item in follows:
-        followers+=User.query.filter_by(id=item.follower_id).all()
-    return jsonify([{
-        'username': u.username,
-        'avatar_url': u.avatar_url,
-        'is_following': current_user.is_following(u)
-    } for u in followers])
+    follower_ids = [
+        f.follower_id
+        for f in Follower.query.filter_by(followed_id=user.id).all()
+    ]
+    return jsonify(_user_list_payload(follower_ids))
+
 
 @bp.route('/api/following/<username>')
 @login_required
 def api_following(username):
     user = User.query.filter_by(username=username).first_or_404()
-    follows = Follower.query.filter_by(follower_id=user.id).all()
-    following=[]
-    for item in follows:
-        following+=User.query.filter_by(id=item.followed_id).all()
-    return jsonify([{
-        'username': u.username,
-        'avatar_url': u.avatar_url,
-        'is_following': current_user.is_following(u)
-    } for u in following])
+    followed_ids = [
+        f.followed_id
+        for f in Follower.query.filter_by(follower_id=user.id).all()
+    ]
+    return jsonify(_user_list_payload(followed_ids))
 
 @bp.route('/user/<username>')
 def public_profile(username):

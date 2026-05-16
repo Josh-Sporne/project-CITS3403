@@ -1,5 +1,5 @@
+import math
 import os
-import uuid
 from datetime import datetime, timedelta, timezone
 
 from flask import (
@@ -12,7 +12,7 @@ from app import db
 from app.models import Comment, Rating, Recipe, RecipeIngredient, SavedRecipe, Tag
 from app.recipes import bp
 from app.recipes.forms import CATEGORY_CHOICES, RecipeForm
-from app.utils import json_body
+from app.utils import json_body, save_uploaded_image
 
 
 @bp.route('/')
@@ -55,6 +55,13 @@ def discover():
 
     query = Recipe.query.filter_by(is_public=True, is_deleted=False)
     total = query.count()
+
+    # Clamp page to the last legitimate page so a hostile/curious user hitting
+    # ?page=99999 doesn't make us materialise an absurd number of rows. With
+    # cumulative paging (limit = page * per_page) the upper bound is whatever
+    # number of pages actually exist.
+    max_page = max(math.ceil(total / per_page), 1)
+    page = min(page, max_page)
 
     # Return recipes 1..page cumulatively so deep links like /discover?page=3
     # land the user on a page that already shows everything up to that point.
@@ -173,13 +180,9 @@ def create():
         recipe.generate_slug()
 
         if form.image.data:
-            image = form.image.data
-            ext = image.filename.rsplit('.', 1)[-1].lower()
-            filename = f'{uuid.uuid4().hex}.{ext}'
-            upload_dir = current_app.config['UPLOAD_FOLDER']
-            os.makedirs(upload_dir, exist_ok=True)
-            image.save(os.path.join(upload_dir, filename))
-            recipe.image_filename = filename
+            filename = save_uploaded_image(form.image.data)
+            if filename:
+                recipe.image_filename = filename
 
         db.session.add(recipe)
         db.session.flush()
@@ -318,13 +321,9 @@ def edit(slug):
                 if os.path.exists(old_path):
                     os.remove(old_path)
 
-            image = form.image.data
-            ext = image.filename.rsplit('.', 1)[-1].lower()
-            filename = f'{uuid.uuid4().hex}.{ext}'
-            upload_dir = current_app.config['UPLOAD_FOLDER']
-            os.makedirs(upload_dir, exist_ok=True)
-            image.save(os.path.join(upload_dir, filename))
-            recipe.image_filename = filename
+            filename = save_uploaded_image(form.image.data)
+            if filename:
+                recipe.image_filename = filename
 
         RecipeIngredient.query.filter_by(recipe_id=recipe.id).delete()
 
@@ -379,7 +378,10 @@ def edit(slug):
 @bp.route('/recipe/<slug>/delete', methods=['POST'])
 @login_required
 def delete(slug):
-    recipe = Recipe.query.filter_by(slug=slug).first_or_404()
+    # Filter is_deleted=False so a re-submit of a delete request (e.g. browser
+    # back + re-POST after the recipe is already gone) returns 404 instead of
+    # silently "succeeding" on an already-deleted recipe.
+    recipe = Recipe.query.filter_by(slug=slug, is_deleted=False).first_or_404()
     if recipe.creator_id != current_user.id:
         from flask import abort
         abort(403)

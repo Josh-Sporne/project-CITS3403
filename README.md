@@ -137,7 +137,7 @@ python seed.py
 flask run
 ```
 
-### Windows
+### Windows (Command Prompt)
 
 ```cmd
 :: Clone the repository (from the feature-rania branch)
@@ -146,7 +146,7 @@ cd project-CITS3403
 
 :: Create virtual environment
 python -m venv .venv
-.venv\Scripts\activate
+.venv\Scripts\activate.bat
 
 :: Install dependencies
 pip install -r requirements.txt
@@ -162,6 +162,36 @@ flask db upgrade
 python seed.py
 
 :: Run the application
+flask run
+```
+
+### Windows (PowerShell — default on Windows 10/11)
+
+```powershell
+# Clone the repository (from the feature-rania branch)
+git clone -b feature-rania https://github.com/Josh-Sporne/project-CITS3403.git
+cd project-CITS3403
+
+# Create virtual environment
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+# If PowerShell blocks the activation script, run this once:
+#   Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
+Copy-Item .env.example .env
+# Edit .env with your own SECRET_KEY (and OPENAI_API_KEY if using AI features)
+
+# Initialize database
+flask db upgrade
+
+# Load demo data (optional)
+python seed.py
+
+# Run the application
 flask run
 ```
 
