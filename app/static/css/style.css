@@ -1408,6 +1408,7 @@ footer p {
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, var(--pt-sun), var(--pt-mint));
+  transition: width 0.45s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
 .rating-breakdown-count {

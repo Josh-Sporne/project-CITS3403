@@ -25,9 +25,29 @@ function toggleFollow(username, btn) {
   })
   .then(r => r.json())
   .then(data => {
-    if (data.success) {
-      btn.dataset.following = !isFollowing;
-      btn.textContent = isFollowing ? 'Follow' : 'Unfollow';
+    if (!data.success) return;
+
+    // 1. Flip the clicked button + any other follow-button for the SAME user
+    //    on this page (e.g. recipe cards showing the same creator).
+    document.querySelectorAll(`.follow-btn[data-username="${username}"], button[data-username="${username}"]`).forEach(b => {
+      b.dataset.following = String(!isFollowing);
+      b.textContent = isFollowing ? 'Follow' : 'Unfollow';
+    });
+
+    // 2. Update FOLLOWER COUNT — only if the displayed count belongs to the
+    //    user we just followed/unfollowed (matched via data-username).
+    const followerEl = document.getElementById('profile-follower-count');
+    if (followerEl && followerEl.dataset.username === username && typeof data.follower_count === 'number') {
+      followerEl.textContent = data.follower_count;
+    }
+
+    // 3. Update FOLLOWING COUNT — only if we're on the CURRENT USER's own
+    //    profile (their following count changed by ±1).
+    const currentUser = document.querySelector('meta[name="current-user"]')?.content || '';
+    const followingEl = document.getElementById('profile-following-count');
+    if (followingEl && followingEl.dataset.username === currentUser && currentUser) {
+      const delta = isFollowing ? -1 : 1;
+      followingEl.textContent = (parseInt(followingEl.textContent, 10) || 0) + delta;
     }
   })
   .catch(() => showErrorToast('Could not update follow status.'));

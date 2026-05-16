@@ -33,11 +33,13 @@
           <div class="stat-label">Avg Rating</div>
         </div>
         <div class="profile-stat" onclick="openFollow('followers')">
-          <div class="stat-number text-violet">{{ follower_count }}</div>
+          <div class="stat-number text-violet" id="profile-follower-count"
+               data-username="{{ user.username }}">{{ follower_count }}</div>
           <div class="stat-label">Followers</div>
         </div>
         <div class="profile-stat" onclick="openFollow('following')">
-          <div class="stat-number text-mint">{{ following_count }}</div>
+          <div class="stat-number text-mint" id="profile-following-count"
+               data-username="{{ user.username }}">{{ following_count }}</div>
           <div class="stat-label">Following</div>
         </div>
       </div>
