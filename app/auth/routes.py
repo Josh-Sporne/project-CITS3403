@@ -128,10 +128,14 @@ def profile_edit():
     edit_form = EditProfileForm(obj=current_user)
     if edit_form.validate_on_submit():
         current_user.bio = edit_form.bio.data
-        if edit_form.new_username.data != "":
-            current_user.username=edit_form.new_username.data.strip().lower()
-        if edit_form.new_email.data != "":
-            current_user.email=edit_form.new_email.data.strip().lower()
+        # Fields are pre-filled with current values, so only commit a change
+        # if the value actually differs — avoids needless DB writes.
+        new_uname = (edit_form.new_username.data or '').strip().lower()
+        if new_uname and new_uname != (current_user.username or '').lower():
+            current_user.username = new_uname
+        new_email = (edit_form.new_email.data or '').strip().lower()
+        if new_email and new_email != (current_user.email or '').lower():
+            current_user.email = new_email
         if edit_form.new_password.data != "":
             current_user.set_password(edit_form.new_password.data)
         if edit_form.image.data:
@@ -144,12 +148,17 @@ def profile_edit():
             current_user.avatar = url_for('static', filename='uploads/' + filename)
         db.session.commit()
         flash('Profile updated!', 'success')
+        # On success, drop the #settings-pane hash so the page opens on the
+        # default "My Recipes" tab — closes the settings form and shows the
+        # updated username in the page header at a glance.
+        return redirect(url_for('auth.profile'))
     else:
         for field, errors in edit_form.errors.items():
             field=field.replace("_", " ").capitalize()
             for error in errors:
                 error=error.replace("_", " ").lower()
                 flash(f'{field} {error}', 'danger')
+    # On error, stay on the settings tab so the user can fix and retry.
     return redirect(url_for('auth.profile')+"#settings-pane")
 
 @bp.route('/api/followers/<username>')

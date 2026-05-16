@@ -71,6 +71,20 @@ function autoDismissAlerts() {
     });
 }
 
+/* When the page loads with a flashed alert (success/error), gently scroll it
+ * into view. Fixes the case where a hash-link (e.g. /profile#settings-pane)
+ * jumps the user past the alert and they don't realise something happened.
+ * Only runs on initial load — dynamically-added alerts aren't auto-scrolled. */
+function scrollToFlashBanner() {
+    const alert = document.querySelector('.container .alert');
+    if (!alert) return;
+    // Defer past the browser's hash-jump AND any tab-activation reflow so our
+    // scroll wins. ~80ms is enough for Bootstrap tab.show() to settle.
+    setTimeout(() => {
+        alert.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
+}
+
 /* ── Styled confirm modal ──
  * Themed equivalent of native confirm(). Uses #ptConfirmModal defined in base.html.
  * Returns a Promise<boolean> that resolves true on Confirm, false on Cancel/close.
@@ -507,6 +521,7 @@ function initConfirmForms() {
 
 document.addEventListener('DOMContentLoaded', () => {
     autoDismissAlerts();
+    scrollToFlashBanner();
     initScrollReveal();
     initNavbarScroll();
     initHeadingReveal();

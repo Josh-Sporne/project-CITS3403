@@ -283,16 +283,30 @@
                   <span id="bio-count">{{ (edit_form.bio.data or '') | length }}</span> / 500
                 </div>
 
-                <label for="new_username" class="form-label" style="color: var(--pt-text-secondary);">Change Username</label>
-                <input class="form-control" id="new_username" name="new_username"
-                       placeholder="" value="{{ edit_form.new_username.data or '' }}">
+                <label for="new_username" class="form-label" style="color: var(--pt-text-secondary);">Username</label>
+                <div class="input-group">
+                  <input class="form-control profile-locked-field" id="new_username" name="new_username"
+                         value="{{ current_user.username }}"
+                         data-original="{{ current_user.username }}" readonly>
+                  <button type="button" class="btn btn-outline-light profile-edit-toggle"
+                          data-target="new_username" aria-label="Edit username" title="Edit username">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                </div>
                 {% for error in edit_form.new_username.errors %}
                   <div class="text-danger small mt-1">{{ error }}</div>
                 {% endfor %}
 
-                <label for="new_email" class="form-label" style="color: var(--pt-text-secondary);">Change Email</label>
-                <input class="form-control" id="new_email" name="new_email"
-                       placeholder="" value="{{ edit_form.new_email.data or '' }}">
+                <label for="new_email" class="form-label mt-3" style="color: var(--pt-text-secondary);">Email</label>
+                <div class="input-group">
+                  <input class="form-control profile-locked-field" id="new_email" name="new_email"
+                         value="{{ current_user.email }}"
+                         data-original="{{ current_user.email }}" readonly>
+                  <button type="button" class="btn btn-outline-light profile-edit-toggle"
+                          data-target="new_email" aria-label="Edit email" title="Edit email">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                </div>
                 {% for error in edit_form.new_email.errors %}
                   <div class="text-danger small mt-1">{{ error }}</div>
                 {% endfor %}
@@ -355,6 +369,33 @@
       bioCount.textContent = this.value.length;
     });
   }
+
+  /* Profile field Edit toggle — pencil/cancel button next to username + email.
+   * Click pencil → field unlocks, focuses, cursor at end.
+   * Click cancel → field resets to original value and re-locks.
+   * Prevents accidental edits while leaving the current value visible. */
+  document.querySelectorAll('.profile-edit-toggle').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const target = document.getElementById(btn.dataset.target);
+      if (!target) return;
+      const isLocked = target.hasAttribute('readonly');
+      if (isLocked) {
+        target.removeAttribute('readonly');
+        target.focus();
+        const len = target.value.length;
+        try { target.setSelectionRange(len, len); } catch (_) {}
+        btn.innerHTML = '<i class="bi bi-x-lg"></i>';
+        btn.setAttribute('aria-label', 'Cancel edit');
+        btn.setAttribute('title', 'Cancel edit');
+      } else {
+        target.value = target.dataset.original || '';
+        target.setAttribute('readonly', '');
+        btn.innerHTML = '<i class="bi bi-pencil"></i>';
+        btn.setAttribute('aria-label', 'Edit');
+        btn.setAttribute('title', 'Edit');
+      }
+    });
+  });
   const CSRF = document.querySelector('meta[name="csrf-token"]')?.content || '';
   const buttons = document.querySelectorAll('.save-btn');
   buttons.forEach(button => {
