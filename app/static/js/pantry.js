@@ -16,12 +16,7 @@
             .map(c => c.dataset.name);
     }
 
-    function escapeHtml(str) {
-        if (str == null) return '';
-        const div = document.createElement('div');
-        div.appendChild(document.createTextNode(String(str)));
-        return div.innerHTML;
-    }
+    // escapeHtml is provided globally by main.js (window.escapeHtml)
 
     function addChip(name) {
         name = name.trim();

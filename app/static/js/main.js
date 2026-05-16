@@ -7,16 +7,6 @@ function escapeHtml(s) {
 }
 window.escapeHtml = escapeHtml;
 
-function showErrorToast(message) {
-  const el = document.createElement('div');
-  el.className = 'alert alert-danger position-fixed bottom-0 end-0 m-3';
-  el.style.zIndex = 9999;
-  el.textContent = message;
-  document.body.appendChild(el);
-  setTimeout(() => el.remove(), 4000);
-}
-window.showErrorToast = showErrorToast;
-
 function toggleFollow(username, btn) {
   const isFollowing = btn.dataset.following === 'true';
   fetch(`/user/${username}/follow`, {
