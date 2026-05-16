@@ -28,6 +28,62 @@
     let currentCategory = initialCategory;
     let currentSort = 'newest';
 
+    /* ── Back-button state restoration ──
+     * Without this, clicking Load More → opening a recipe → hitting browser
+     * back drops you on page 1 again, losing your scroll position and the
+     * appended cards. We save the rendered HTML + filter state + scroll
+     * position to sessionStorage on pagehide, then restore on the next page
+     * load if the URL filters still match. 5-minute TTL so results don't
+     * silently get stale across long absences.
+     */
+    const DISCOVER_CACHE_KEY = 'pt-discover-results';
+    const DISCOVER_CACHE_TTL_MS = 5 * 60 * 1000;
+
+    function currentFilterKey() {
+        return JSON.stringify({
+            q: currentQuery,
+            category: currentCategory,
+            sort: currentSort,
+        });
+    }
+
+    function saveDiscoverCache() {
+        // Nothing rendered yet (e.g. user navigated away during a fetch) — skip.
+        if (!resultsContainer.querySelector('.pt-card')) return;
+        try {
+            sessionStorage.setItem(DISCOVER_CACHE_KEY, JSON.stringify({
+                filterKey: currentFilterKey(),
+                html: resultsContainer.innerHTML,
+                currentPage: currentPage,
+                hasNext: !!document.getElementById('load-more-btn'),
+                resultCount: resultCount ? resultCount.textContent : '',
+                scrollY: window.scrollY,
+                ts: Date.now(),
+            }));
+        } catch (_) { /* quota or disabled */ }
+    }
+
+    function loadDiscoverCache() {
+        try {
+            const raw = sessionStorage.getItem(DISCOVER_CACHE_KEY);
+            if (!raw) return null;
+            const state = JSON.parse(raw);
+            if (!state || Date.now() - (state.ts || 0) > DISCOVER_CACHE_TTL_MS) {
+                sessionStorage.removeItem(DISCOVER_CACHE_KEY);
+                return null;
+            }
+            // Filters changed since cache was saved — drop and refetch fresh.
+            if (state.filterKey !== currentFilterKey()) {
+                sessionStorage.removeItem(DISCOVER_CACHE_KEY);
+                return null;
+            }
+            return state;
+        } catch (_) { return null; }
+    }
+
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    window.addEventListener('pagehide', saveDiscoverCache);
+
     /* ── Tag pills ── */
 
     function setActiveTag(activePill) {
@@ -251,20 +307,55 @@
         fetchRecipes(false);
     });
 
+    /* ── Restore cached results (back-button) BEFORE deciding to fetch ──
+     * If the user just came back from a recipe detail page and we have a
+     * matching cache, swap the rendered HTML in directly and skip the fetch.
+     * Returns true if the restore happened so the caller can skip refetching.
+     */
+    function tryRestoreFromCache() {
+        const state = loadDiscoverCache();
+        if (!state) return false;
+
+        resultsContainer.innerHTML = state.html;
+        currentPage = state.currentPage || 1;
+        if (resultCount && state.resultCount) {
+            resultCount.textContent = state.resultCount;
+        }
+        if (loadMoreWrap) {
+            loadMoreWrap.innerHTML = state.hasNext
+                ? '<button id="load-more-btn" class="btn btn-outline-light"><i class="bi bi-arrow-down-circle me-1"></i> Load More</button>'
+                : '';
+            bindLoadMore();
+        }
+        // Sync the UI controls (search box, tag pills) with the restored filter state.
+        if (searchInput) searchInput.value = currentQuery;
+        if (sortSelect)  sortSelect.value  = currentSort;
+        tagPills.forEach(t => {
+            const isMatch = (t.dataset.category || '').toLowerCase() === currentCategory;
+            t.classList.toggle('active', isMatch);
+            t.setAttribute('aria-pressed', String(isMatch));
+        });
+        // Jump to saved scroll position after the browser lays out the restored HTML.
+        requestAnimationFrame(() => window.scrollTo(0, state.scrollY || 0));
+        return true;
+    }
+
     /* ── Initial sync: apply ?category and ?q from URL on page load ── */
-    if (initialCategory || initialQuery) {
-        if (searchInput && initialQuery) {
-            searchInput.value = initialQuery;
+    if (!tryRestoreFromCache()) {
+        if (initialCategory || initialQuery) {
+            if (searchInput && initialQuery) {
+                searchInput.value = initialQuery;
+            }
+            if (initialCategory) {
+                tagPills.forEach(t => {
+                    const isMatch = t.dataset.category.toLowerCase() === initialCategory;
+                    t.classList.toggle('active', isMatch);
+                    t.setAttribute('aria-pressed', String(isMatch));
+                });
+            }
+            // Re-fetch from page 1 with the URL-derived filters applied.
+            currentPage = 1;
+            fetchRecipes(false);
         }
-        if (initialCategory) {
-            tagPills.forEach(t => {
-                const isMatch = t.dataset.category.toLowerCase() === initialCategory;
-                t.classList.toggle('active', isMatch);
-                t.setAttribute('aria-pressed', String(isMatch));
-            });
-        }
-        // Re-fetch from page 1 with the URL-derived filters applied.
-        currentPage = 1;
-        fetchRecipes(false);
     }
 })();

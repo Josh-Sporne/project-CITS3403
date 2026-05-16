@@ -11,6 +11,45 @@
     let lastMatches = [];
     let lastAiSuggestions = [];
 
+    /* ── Back-button state restoration ──
+     * Browser back from a recipe detail page would drop you on an empty pantry
+     * because the suggest results live only in JS memory. We persist the last
+     * results + scroll position to sessionStorage on pagehide, then restore on
+     * the next page load. sessionStorage is per-tab so this never leaks across
+     * sessions, and a 5-minute TTL keeps stale results from sticking around.
+     */
+    const CACHE_KEY = 'pt-pantry-results';
+    const CACHE_TTL_MS = 5 * 60 * 1000;
+
+    function savePantryCache() {
+        if (lastMatches.length === 0 && lastAiSuggestions.length === 0) return;
+        try {
+            sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+                matches: lastMatches,
+                ai_suggestions: lastAiSuggestions,
+                scrollY: window.scrollY,
+                ts: Date.now(),
+            }));
+        } catch (_) { /* quota or disabled — fall back to no-cache */ }
+    }
+
+    function loadPantryCache() {
+        try {
+            const raw = sessionStorage.getItem(CACHE_KEY);
+            if (!raw) return null;
+            const state = JSON.parse(raw);
+            if (!state || Date.now() - (state.ts || 0) > CACHE_TTL_MS) {
+                sessionStorage.removeItem(CACHE_KEY);
+                return null;
+            }
+            return state;
+        } catch (_) { return null; }
+    }
+
+    // Stop the browser from racing us on scroll restoration so we control it.
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+    window.addEventListener('pagehide', savePantryCache);
+
     function getIngredients() {
         return Array.from(chipsContainer.querySelectorAll('.pantry-chip'))
             .map(c => c.dataset.name);
@@ -373,4 +412,18 @@
     document.getElementById('generateAiBtn').addEventListener('click', function () {
         doSuggest(true);
     });
+
+    /* Restore previously-cached results on page load (e.g. when the user clicked
+     * a result, viewed the recipe, then hit browser back). Runs after renderResults
+     * + all button handlers are defined so the restored DOM is fully interactive. */
+    (function restorePantryOnLoad() {
+        const state = loadPantryCache();
+        if (!state) return;
+        lastMatches = state.matches || [];
+        lastAiSuggestions = state.ai_suggestions || [];
+        if (lastMatches.length === 0 && lastAiSuggestions.length === 0) return;
+        renderResults(lastMatches, lastAiSuggestions);
+        // Wait for layout to settle before jumping to saved scroll position.
+        requestAnimationFrame(() => window.scrollTo(0, state.scrollY || 0));
+    })();
 })();
