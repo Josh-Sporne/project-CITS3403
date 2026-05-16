@@ -416,10 +416,17 @@ def rate(slug):
 
     db.session.commit()
 
+    # Build the 1..5 distribution so the breakdown bars can update without a reload.
+    distribution = {i: 0 for i in range(1, 6)}
+    for r in recipe.ratings.all():
+        if r.score in distribution:
+            distribution[r.score] += 1
+
     return jsonify(
         success=True,
         avg_rating=recipe.avg_rating,
         rating_count=recipe.rating_count,
+        distribution=distribution,
     )
 
 

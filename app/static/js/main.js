@@ -81,10 +81,65 @@ function autoDismissAlerts() {
     });
 }
 
-function confirmAction(title, message, callback) {
-    if (confirm(`${title}\n\n${message}`)) {
-        callback();
+/* ── Styled confirm modal ──
+ * Themed equivalent of native confirm(). Uses #ptConfirmModal defined in base.html.
+ * Returns a Promise<boolean> that resolves true on Confirm, false on Cancel/close.
+ *
+ *   ptConfirm({ title, message, confirmText, cancelText, variant }) → Promise<bool>
+ *
+ * `variant` toggles the confirm button colour: 'danger' (default) = coral, 'primary' = mint.
+ */
+function ptConfirm(opts) {
+    opts = opts || {};
+    const modalEl   = document.getElementById('ptConfirmModal');
+    if (!modalEl || !window.bootstrap) {
+        // Graceful fallback if base.html modal is somehow missing.
+        return Promise.resolve(window.confirm((opts.title ? opts.title + '\n\n' : '') + (opts.message || 'Are you sure?')));
     }
+    const titleEl   = modalEl.querySelector('#ptConfirmTitle');
+    const bodyEl    = modalEl.querySelector('#ptConfirmBody');
+    const okBtn     = modalEl.querySelector('#ptConfirmOk');
+    const cancelBtn = modalEl.querySelector('#ptConfirmCancel');
+
+    titleEl.textContent = opts.title   || 'Confirm';
+    bodyEl.textContent  = opts.message || 'Are you sure?';
+    okBtn.textContent   = opts.confirmText || 'Confirm';
+    cancelBtn.textContent = opts.cancelText || 'Cancel';
+
+    // Reset variant classes
+    okBtn.classList.remove('btn-coral', 'btn-mint', 'btn-outline-mint');
+    okBtn.classList.add(opts.variant === 'primary' ? 'btn-mint' : 'btn-coral');
+
+    const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+    return new Promise((resolve) => {
+        let resolved = false;
+        function onOk() {
+            resolved = true;
+            cleanup();
+            modal.hide();
+            resolve(true);
+        }
+        function onHidden() {
+            if (!resolved) {
+                cleanup();
+                resolve(false);
+            }
+        }
+        function cleanup() {
+            okBtn.removeEventListener('click', onOk);
+            modalEl.removeEventListener('hidden.bs.modal', onHidden);
+        }
+        okBtn.addEventListener('click', onOk);
+        modalEl.addEventListener('hidden.bs.modal', onHidden);
+        modal.show();
+    });
+}
+window.ptConfirm = ptConfirm;
+
+// Backward-compat: existing confirmAction(title, message, callback) callers still work,
+// but now they see the styled modal instead of the browser dialog.
+function confirmAction(title, message, callback) {
+    ptConfirm({ title: title, message: message }).then((ok) => { if (ok) callback(); });
 }
 
 function showSpinner(container) {
@@ -428,6 +483,38 @@ function initGroceryCheck() {
     });
 }
 
+/* ── Global form-level confirm interceptor ──
+ * Any <form class="pt-confirm-form"> will route its submit through the styled
+ * ptConfirm modal instead of native confirm(). Configure per-form via data-*:
+ *   data-confirm-title   — modal title       (default: "Confirm")
+ *   data-confirm-message — modal body text   (default: "Are you sure?")
+ *   data-confirm-text    — primary btn label (default: "Confirm")
+ *   data-confirm-variant — "danger" (default coral) | "primary" (mint)
+ *
+ * Uses delegation so dynamically-added forms work too.
+ */
+function initConfirmForms() {
+    document.addEventListener('submit', function (e) {
+        const form = e.target;
+        if (!(form instanceof HTMLFormElement)) return;
+        if (!form.classList.contains('pt-confirm-form')) return;
+        if (form.dataset.ptConfirmed === '1') return;  // already approved — let it through
+
+        e.preventDefault();
+        ptConfirm({
+            title:       form.dataset.confirmTitle   || 'Confirm',
+            message:     form.dataset.confirmMessage || 'Are you sure?',
+            confirmText: form.dataset.confirmText    || 'Confirm',
+            variant:     form.dataset.confirmVariant || 'danger',
+        }).then(function (ok) {
+            if (ok) {
+                form.dataset.ptConfirmed = '1';
+                form.submit();
+            }
+        });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     autoDismissAlerts();
     initScrollReveal();
@@ -435,4 +522,5 @@ document.addEventListener('DOMContentLoaded', () => {
     initHeadingReveal();
     initCountUp();
     initGroceryCheck();
+    initConfirmForms();
 });

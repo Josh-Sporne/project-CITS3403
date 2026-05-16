@@ -74,12 +74,12 @@
                 if (res.ok && res.data.success) {
                     window.location.reload();
                 } else {
-                    alert(res.data.error || 'Could not update visibility.');
+                    showErrorToast(res.data.error || 'Could not update visibility.');
                     btn.disabled = false;
                 }
             })
             .catch(function () {
-                alert('Network error.');
+                showErrorToast('Network error.');
                 btn.disabled = false;
             });
     });

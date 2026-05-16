@@ -187,7 +187,7 @@
                 } else {
                     imgSrc = `https://loremflickr.com/600/400/${slugTags},food?lock=${m.recipe_id}`;
                 }
-                const imgEl = `<img src="${imgSrc}" alt="${escapeHtml(m.title)}"
+                const imgEl = `<img src="${imgSrc}" alt="${escapeHtml(m.title)}" loading="lazy"
                              style="width:100%;height:120px;object-fit:cover;border-radius:12px;margin-bottom:0.5rem;">`;
                 const imgLink = m.slug
                     ? `<a href="/recipe/${escapeHtml(m.slug)}" class="d-block" aria-label="View ${escapeHtml(m.title)}">${imgEl}</a>`
@@ -325,11 +325,11 @@
                             '</div>';
                     }
                 } else {
-                    alert(res.data.error || 'Could not save recipe.');
+                    showErrorToast(res.data.error || 'Could not save recipe.');
                 }
             })
             .catch(() => {
-                alert('Network error — please try again.');
+                showErrorToast('Network error — please try again.');
             })
             .finally(() => {
                 buttons.forEach(b => { b.disabled = false; });
@@ -337,11 +337,18 @@
     });
 
     if (feedbackEl) {
-        feedbackEl.addEventListener('click', function (e) {
+        feedbackEl.addEventListener('click', async function (e) {
             const pub = e.target.closest('.btn-feedback-publish');
             if (!pub) return;
             const slug = pub.dataset.slug;
-            if (!slug || !confirm('Publish this recipe for everyone to see?')) return;
+            if (!slug) return;
+            const ok = await ptConfirm({
+                title: 'Publish recipe?',
+                message: 'Publish this recipe for everyone to see?',
+                confirmText: 'Publish',
+                variant: 'primary',
+            });
+            if (!ok) return;
             pub.disabled = true;
             fetch('/api/recipe/' + encodeURIComponent(slug) + '/visibility', {
                 method: 'POST',
@@ -353,12 +360,12 @@
                     if (res.ok && res.data.success) {
                         window.location.href = '/recipe/' + encodeURIComponent(slug);
                     } else {
-                        alert(res.data.error || 'Could not publish.');
+                        showErrorToast(res.data.error || 'Could not publish.');
                         pub.disabled = false;
                     }
                 })
                 .catch(() => {
-                    alert('Network error.');
+                    showErrorToast('Network error.');
                     pub.disabled = false;
                 });
         });
