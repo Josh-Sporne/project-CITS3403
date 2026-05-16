@@ -197,7 +197,7 @@
         } else {
             imgSrc = `https://loremflickr.com/600/400/${slugTags},food?lock=${r.id}`;
         }
-        const mediaBlock = `<img src="${imgSrc}" alt="${escapeHtml(r.title)}">`;
+        const mediaBlock = `<img src="${imgSrc}" alt="${escapeHtml(r.title)}" loading="lazy">`;
 
         const stars = Array.from({ length: 5 }, (_, i) =>
             `<i class="bi bi-star${i < Math.round(r.avg_rating || 0) ? '-fill' : ''}"></i>`

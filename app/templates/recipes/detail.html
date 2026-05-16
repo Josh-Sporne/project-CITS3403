@@ -84,7 +84,10 @@
             <a href="{{ url_for('recipes.edit', slug=recipe.slug) }}" class="btn btn-sm btn-outline-light">
                 <i class="bi bi-pencil me-1"></i> Edit
             </a>
-            <form method="POST" action="{{ url_for('recipes.delete', slug=recipe.slug) }}" class="d-inline" onsubmit="return confirm('Delete this recipe? This cannot be undone.');">
+            <form method="POST" action="{{ url_for('recipes.delete', slug=recipe.slug) }}" class="d-inline pt-confirm-form"
+                  data-confirm-title="Delete recipe?"
+                  data-confirm-message="Delete &ldquo;{{ recipe.title }}&rdquo;? This cannot be undone."
+                  data-confirm-text="Delete">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-sm btn-outline-coral">
                     <i class="bi bi-trash me-1"></i> Delete
@@ -163,7 +166,7 @@
         {% for score in [5, 4, 3, 2, 1] %}
         {% set count = rating_distribution[score] %}
         {% set pct = (count / rating_count * 100) if rating_count else 0 %}
-        <div class="rating-breakdown-row">
+        <div class="rating-breakdown-row" data-score="{{ score }}">
             <span class="rating-breakdown-label">{{ score }} <i class="bi bi-star-fill" aria-hidden="true"></i></span>
             <div class="rating-breakdown-bar">
                 <div class="rating-breakdown-fill" style="width: {{ pct }}%;"></div>
@@ -334,6 +337,19 @@
                         s.className = idx < filled ? 'bi bi-star-fill' : 'bi bi-star';
                         s.setAttribute('aria-checked', String(parseInt(s.dataset.value, 10) === score));
                     });
+                    // Update breakdown bars + counts from the new distribution
+                    if (data.distribution && data.rating_count) {
+                        for (let s = 1; s <= 5; s++) {
+                            const row = document.querySelector(`.rating-breakdown-row[data-score="${s}"]`);
+                            if (!row) continue;
+                            const count = data.distribution[s] || 0;
+                            const pct = data.rating_count > 0 ? (count / data.rating_count * 100) : 0;
+                            const fill = row.querySelector('.rating-breakdown-fill');
+                            const countEl = row.querySelector('.rating-breakdown-count');
+                            if (fill) fill.style.width = pct + '%';
+                            if (countEl) countEl.textContent = count;
+                        }
+                    }
                     showToast('Thanks for rating!');
                 } else if (data.error) {
                     showErrorToast(data.error);
@@ -549,24 +565,35 @@
 
     const pubBtn = document.getElementById('recipe-publish-btn');
     if (pubBtn) {
-        pubBtn.addEventListener('click', () => {
-            if (!confirm('Publish this recipe? It will be visible to everyone.')) return;
+        pubBtn.addEventListener('click', async () => {
+            const ok = await ptConfirm({
+                title: 'Publish recipe?',
+                message: 'Publish this recipe? It will be visible to everyone.',
+                confirmText: 'Publish',
+                variant: 'primary',
+            });
+            if (!ok) return;
             pubBtn.disabled = true;
             postVisibility(true).then(res => {
                 if (res.ok && res.data.success) window.location.reload();
-                else { alert(res.data.error || 'Could not publish.'); pubBtn.disabled = false; }
-            }).catch(() => { alert('Network error.'); pubBtn.disabled = false; });
+                else { showErrorToast(res.data.error || 'Could not publish.'); pubBtn.disabled = false; }
+            }).catch(() => { showErrorToast('Network error.'); pubBtn.disabled = false; });
         });
     }
     const unpubBtn = document.getElementById('recipe-unpublish-btn');
     if (unpubBtn) {
-        unpubBtn.addEventListener('click', () => {
-            if (!confirm('Make this recipe private? It will no longer be visible to others.')) return;
+        unpubBtn.addEventListener('click', async () => {
+            const ok = await ptConfirm({
+                title: 'Make recipe private?',
+                message: 'Make this recipe private? It will no longer be visible to others.',
+                confirmText: 'Make private',
+            });
+            if (!ok) return;
             unpubBtn.disabled = true;
             postVisibility(false).then(res => {
                 if (res.ok && res.data.success) window.location.reload();
-                else { alert(res.data.error || 'Could not make private.'); unpubBtn.disabled = false; }
-            }).catch(() => { alert('Network error.'); unpubBtn.disabled = false; });
+                else { showErrorToast(res.data.error || 'Could not make private.'); unpubBtn.disabled = false; }
+            }).catch(() => { showErrorToast('Network error.'); unpubBtn.disabled = false; });
         });
     }
 

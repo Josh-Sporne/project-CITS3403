@@ -56,11 +56,11 @@
                                               else 'https://loremflickr.com/600/400/' ~ recipe.slug|replace('-', ',') ~ ',food?lock=' ~ recipe.id) %}
                             {% if recipe.slug %}
                             <a href="/recipe/{{ recipe.slug }}" class="pt-card-media d-block" aria-label="View {{ recipe.title }}">
-                                <img src="{{ _img_src }}" alt="{{ recipe.title }}">
+                                <img src="{{ _img_src }}" alt="{{ recipe.title }}" loading="lazy">
                             </a>
                             {% else %}
                             <div class="pt-card-media">
-                                <img src="{{ _img_src }}" alt="{{ recipe.title }}">
+                                <img src="{{ _img_src }}" alt="{{ recipe.title }}" loading="lazy">
                             </div>
                             {% endif %}
                             <h3>
