@@ -764,6 +764,24 @@ a.badge[style*="179, 136, 255"]:hover {
   background: rgba(179, 136, 255, 0.28) !important;
 }
 
+/* AI-generated recipe badge */
+.badge-ai {
+  background: linear-gradient(135deg, rgba(179,136,255,0.18), rgba(94,245,192,0.14));
+  color: var(--pt-violet);
+  border: 1px solid rgba(179,136,255,0.3);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 0.2em 0.5em;
+  border-radius: 999px;
+  vertical-align: middle;
+}
+[data-theme="light"] .badge-ai {
+  background: rgba(124,77,255,0.08);
+  color: var(--pt-violet);
+  border-color: rgba(124,77,255,0.25);
+}
+
 /* --- Tables --- */
 .table {
   color: var(--pt-text);

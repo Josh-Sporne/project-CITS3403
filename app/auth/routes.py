@@ -91,15 +91,21 @@ def profile():
     follower_count = Follower.query.filter_by(followed_id=current_user.id).count()
     following_count = Follower.query.filter_by(follower_id=current_user.id).count()
 
-    comments = Comment.query.filter_by(user_id=current_user.id).order_by(Comment.created_at.desc()).all()
-    comment_list=[]
-    for i in range(len(comments)):
-        comment_list.append(Recipe.query.filter_by(id=comments[i].recipe_id).all() + [comments[i]])
+    comment_list = (
+        db.session.query(Recipe, Comment)
+        .join(Comment, Comment.recipe_id == Recipe.id)
+        .filter(Comment.user_id == current_user.id)
+        .order_by(Comment.created_at.desc())
+        .all()
+    )
 
-    ratings = Rating.query.filter_by(user_id=current_user.id).order_by(Rating.created_at.desc()).all()
-    rating_list=[]
-    for i in range(len(ratings)):
-        rating_list.append(Recipe.query.filter_by(id=ratings[i].recipe_id).all() + [ratings[i]])
+    rating_list = (
+        db.session.query(Recipe, Rating)
+        .join(Rating, Rating.recipe_id == Recipe.id)
+        .filter(Rating.user_id == current_user.id)
+        .order_by(Rating.created_at.desc())
+        .all()
+    )
 
     edit_form = EditProfileForm(obj=current_user)
 
@@ -194,18 +200,21 @@ def public_profile(username):
         )
         avg_rating = round(result, 1) if result else 0.0
 
-    comments = Comment.query.filter_by(user_id=user.id).order_by(Comment.created_at.desc()).all()
-    comment_list=[]
-    for i in range(len(comments)):
-        comment_list.append(Recipe.query.filter_by(id=comments[i].recipe_id).all() + [comments[i]])
+    comment_list = (
+        db.session.query(Recipe, Comment)
+        .join(Comment, Comment.recipe_id == Recipe.id)
+        .filter(Comment.user_id == user.id)
+        .order_by(Comment.created_at.desc())
+        .all()
+    )
 
-    # Bug fix: was current_user.id — that 500'd for anonymous viewers AND
-    # always showed the VIEWER's ratings instead of the profile owner's.
-    # Fixed to use user.id (the profile being viewed).
-    ratings = Rating.query.filter_by(user_id=user.id).order_by(Rating.created_at.desc()).all()
-    rating_list=[]
-    for i in range(len(ratings)):
-        rating_list.append(Recipe.query.filter_by(id=ratings[i].recipe_id).all() + [ratings[i]])
+    rating_list = (
+        db.session.query(Recipe, Rating)
+        .join(Rating, Rating.recipe_id == Recipe.id)
+        .filter(Rating.user_id == user.id)
+        .order_by(Rating.created_at.desc())
+        .all()
+    )
 
     follower_count = Follower.query.filter_by(followed_id=user.id).count()
     following_count = Follower.query.filter_by(follower_id=user.id).count()
@@ -228,11 +237,14 @@ def public_profile(username):
 
 @bp.route('/users')
 def users():
-    q = ''
-    users = User.query.filter(User.username.ilike(f'%{q}%')).limit(20).all()
-    total = len(users)
-    has_next = 12<total
-    return render_template('auth/users.html', users=users, total=total, has_next=has_next)
+    q = request.args.get('q', '', type=str).strip()
+    query = User.query
+    if q:
+        query = query.filter(User.username.ilike(f'%{q}%'))
+    users = query.order_by(User.username).limit(20).all()
+    total = query.count()
+    has_next = total > 20
+    return render_template('auth/users.html', users=users, total=total, has_next=has_next, q=q)
 
 
 @bp.route('/api/users')

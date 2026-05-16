@@ -230,11 +230,7 @@
         </article>`;
     }
 
-    function escapeHtml(str) {
-        const div = document.createElement('div');
-        div.appendChild(document.createTextNode(str));
-        return div.innerHTML;
-    }
+    // escapeHtml is provided globally by main.js
 
     /* ── Restore state on Back/Forward ── */
     window.addEventListener('popstate', (e) => {
